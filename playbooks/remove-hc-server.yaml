@@ -1,0 +1,10 @@
+---
+- name: Remove a Hetzner Cloud Server
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Remove the Hetzner Cloud Server
+      hcloud_server:
+        api_token: "{{ HETZNER_CLOUD }}"
+        name: "{{ SERVER_NAME }}"
+        state: absent
