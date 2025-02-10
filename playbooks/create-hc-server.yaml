@@ -14,3 +14,4 @@
           - HetznerMediaProjekt # Hetzner SSH Key as an array
         networks:
           - Media-Central # Private network as an array
+        api_token: "{{ HETZNER_CLOUD }}"
