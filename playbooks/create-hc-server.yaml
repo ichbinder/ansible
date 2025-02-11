@@ -17,15 +17,19 @@
         api_token: "{{ HETZNER_CLOUD }}"
       register: hcloud_server_result
 
+    - name: Print the result
+      debug:
+        var: hcloud_server_result
+
     - name: Add new server to inventory
       add_host:
-        name: "{{ hcloud_server_result.server.public_net.ipv4.ip }}"
+        name: "{{ hcloud_server_result.hcloud_server.public_net.ipv4.ip }}"
         groups: created_servers
         ansible_user: root
 
     - name: Warte, bis SSH verfügbar ist
       wait_for:
-        host: "{{ hcloud_server_result.server.public_net.ipv4.ip }}"
+        host: "{{ hcloud_server_result.hcloud_server.public_net.ipv4.ip }}"
         port: 22
         delay: 10
         timeout: 300
