@@ -23,13 +23,13 @@
 
     - name: Add new server to inventory
       add_host:
-        name: "{{ hcloud_server_result.hcloud_server.public_net.ipv4.ip }}"
+        name: "{{ hcloud_server_result.hcloud_server.ipv4_address }}"
         groups: created_servers
         ansible_user: root
 
     - name: Warte, bis SSH verfügbar ist
       wait_for:
-        host: "{{ hcloud_server_result.hcloud_server.public_net.ipv4.ip }}"
+        host: "{{ hcloud_server_result.hcloud_server.ipv4_address }}"
         port: 22
         delay: 10
         timeout: 300
