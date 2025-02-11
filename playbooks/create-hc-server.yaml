@@ -15,3 +15,95 @@
         private_networks:
           - Media-Central # Private network as an array
         api_token: "{{ HETZNER_CLOUD }}"
+      register: hcloud_server_result
+
+    - name: Add new server to inventory
+      add_host:
+        name: "{{ hcloud_server_result.server.public_net.ipv4.ip }}"
+        groups: created_servers
+        ansible_user: root
+
+    - name: Warte, bis SSH verfügbar ist
+      wait_for:
+        host: "{{ hcloud_server_result.server.public_net.ipv4.ip }}"
+        port: 22
+        delay: 10
+        timeout: 300
+
+- name: Configure server - Install Docker and deploy SABnzbd via Docker Compose
+  hosts: created_servers
+  become: true
+  gather_facts: !!bool true
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: true
+
+    - name: Install prerequisite packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    - name: Docker GPG Schlüssel hinzufügen
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Docker Repository hinzufügen
+      apt_repository:
+        repo: "deb [arch=arm64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        state: present
+
+    - name: Apt Cache aktualisieren nach Repository Hinzufügen
+      apt:
+        update_cache: true
+
+    - name: Docker installieren
+      apt:
+        name: docker-ce
+        state: present
+
+    - name: Docker Compose Plugin installieren
+      apt:
+        name: docker-compose-plugin
+        state: present
+
+    - name: Verzeichnisse für SABnzbd anlegen
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /root/data/config
+        - /root/data/Usenet_Downloads
+        - /root/data/incomplete-downloads
+
+    - name: Docker Compose Datei für SABnzbd kopieren
+      copy:
+        dest: /root/docker-compose.yml
+        content: |
+          version: "3.8"
+          services:
+            sabnzbd:
+              image: lscr.io/linuxserver/sabnzbd:latest
+              container_name: sabnzbd
+              environment:
+                - PUID=1000
+                - PGID=1000
+                - TZ=Etc/UTC
+              volumes:
+                - /root/data/config:/config
+                - /root/data/Usenet_Downloads:/config/Downloads/complete  # optional
+                - /root/data/incomplete-downloads:/config/Downloads/incomplete  # optional
+              ports:
+                - "8080:8080"
+              restart: unless-stopped
+
+    - name: SABnzbd Container mit Docker Compose starten
+      shell: docker compose -f /root/docker-compose.yml up -d
+      args:
+        chdir: /root
