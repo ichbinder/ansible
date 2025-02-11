@@ -86,14 +86,21 @@
         - /root/data/Usenet_Downloads
         - /root/data/incomplete-downloads
 
-    - name: Erstelle sabnzbd.ini Datei
-      copy:
+    - name: Installiere boto3 (zum S3 Zugriff)
+      pip:
+        name: boto3
+      become: true
+
+    - name: Sabnzbd.ini vom S3 Bucket herunterladen
+      amazon.aws.aws_s3:
+        bucket: "media-storage01" # Ersetze mit deinem Bucket-Namen
+        object: "/MediaBackend/sabnzbd.ini" # Pfad zur Datei im Bucket (anpassen falls nötig)
         dest: /root/data/config/sabnzbd.ini
-        content: |
-          [misc]
-          username = admin
-          password = skd!253Dfs
-          host_allow = 0.0.0.0/0
+        mode: get
+        endpoint_url: "https://hel1.your-objectstorage.com" # Passe die Endpoint URL bei Bedarf an
+        aws_access_key: "{{ HETZNER_S3_ACCESS_KEY }}"
+        aws_secret_key: "{{ HETZNER_S3_SECRET_KEY }}"
+      become: true
 
     - name: Docker Compose Datei für SABnzbd kopieren
       copy:
