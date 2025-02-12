@@ -101,7 +101,7 @@
     - name: Sabnzbd.ini vom S3 Bucket herunterladen
       amazon.aws.aws_s3:
         bucket: "media-storage01" # Ersetze mit deinem Bucket-Namen
-        object: "/MediaBackend/sabnzbd.ini" # Pfad zur Datei im Bucket (anpassen falls nötig)
+        object: "MediaBackend/sabnzbd.ini" # Pfad zur Datei im Bucket (anpassen falls nötig)
         dest: /root/data/config/sabnzbd.ini
         mode: get
         endpoint_url: "https://hel1.your-objectstorage.com" # Passe die Endpoint URL bei Bedarf an
