@@ -93,8 +93,9 @@
       become: true
 
     - name: Installiere boto3 (zum S3 Zugriff)
-      pip:
-        name: boto3
+      apt:
+        name: python3-boto3
+        state: present
       become: true
 
     - name: Sabnzbd.ini vom S3 Bucket herunterladen
