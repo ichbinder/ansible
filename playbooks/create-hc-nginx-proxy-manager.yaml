@@ -122,27 +122,31 @@
         msg: "Aktuelle A Records: nettoken.de: {{ dns_a_apex }}, *.nettoken.de: {{ dns_a_wildcard }}"
 
     - name: Setze DNS A Record für nettoken.de falls notwendig
-      hetzner.hcloud.hcloud_dns_record:
-        state: present
-        api_token: "{{ HETZNER_CLOUD }}"
-        zone: nettoken.de
-        record_type: A
-        name: nettoken.de
-        value: "{{ hcloud_server_result.hcloud_server.ipv4_address }}"
-        ttl: 300
-      delegate_to: localhost
+      block:
+        - name: Aktualisiere bestehenden A Record für nettoken.de
+          command: >-
+            hcloud dns record update {{ dns_a_apex[0].id }} --value {{ hcloud_server_result.hcloud_server.ipv4_address }} --ttl 300
+          delegate_to: localhost
+          when: dns_a_apex | length > 0
+        - name: Erstelle A Record für nettoken.de
+          command: >-
+            hcloud dns record create nettoken.de A --name nettoken.de --value {{ hcloud_server_result.hcloud_server.ipv4_address }} --ttl 300
+          delegate_to: localhost
+          when: dns_a_apex | length == 0
       when: (dns_a_apex | length == 0) or (dns_a_apex[0].value != hcloud_server_result.hcloud_server.ipv4_address)
 
     - name: Setze DNS A Record für *.nettoken.de falls notwendig
-      hetzner.hcloud.hcloud_dns_record:
-        state: present
-        api_token: "{{ HETZNER_CLOUD }}"
-        zone: nettoken.de
-        record_type: A
-        name: "*.nettoken.de"
-        value: "{{ hcloud_server_result.hcloud_server.ipv4_address }}"
-        ttl: 300
-      delegate_to: localhost
+      block:
+        - name: Aktualisiere bestehenden Wildcard-A Record für *.nettoken.de
+          command: >-
+            hcloud dns record update {{ dns_a_wildcard[0].id }} --value {{ hcloud_server_result.hcloud_server.ipv4_address }} --ttl 300
+          delegate_to: localhost
+          when: dns_a_wildcard | length > 0
+        - name: Erstelle Wildcard-A Record für *.nettoken.de
+          command: >-
+            hcloud dns record create nettoken.de A --name "*.nettoken.de" --value {{ hcloud_server_result.hcloud_server.ipv4_address }} --ttl 300
+          delegate_to: localhost
+          when: dns_a_wildcard | length == 0
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hcloud_server_result.hcloud_server.ipv4_address)
 
     - name: Hole AAAA Records für nettoken.de (A und Wildcard)
@@ -168,25 +172,29 @@
       when: hcloud_server_result.hcloud_server.ipv6_address is defined
 
     - name: Setze DNS AAAA Record für nettoken.de falls notwendig
-      hetzner.hcloud.hcloud_dns_record:
-        state: present
-        api_token: "{{ HETZNER_CLOUD }}"
-        zone: nettoken.de
-        record_type: AAAA
-        name: nettoken.de
-        value: "{{ hcloud_server_result.hcloud_server.ipv6_address }}"
-        ttl: 300
-      delegate_to: localhost
+      block:
+        - name: Aktualisiere bestehenden AAAA Record für nettoken.de
+          command: >-
+            hcloud dns record update {{ dns_aaaa_apex[0].id }} --value {{ hcloud_server_result.hcloud_server.ipv6_address }} --ttl 300
+          delegate_to: localhost
+          when: dns_aaaa_apex | length > 0
+        - name: Erstelle AAAA Record für nettoken.de
+          command: >-
+            hcloud dns record create nettoken.de AAAA --name nettoken.de --value {{ hcloud_server_result.hcloud_server.ipv6_address }} --ttl 300
+          delegate_to: localhost
+          when: dns_aaaa_apex | length == 0
       when: hcloud_server_result.hcloud_server.ipv6_address is defined and ((dns_aaaa_apex | length == 0) or (dns_aaaa_apex[0].value != hcloud_server_result.hcloud_server.ipv6_address))
 
     - name: Setze DNS AAAA Record für *.nettoken.de falls notwendig
-      hetzner.hcloud.hcloud_dns_record:
-        state: present
-        api_token: "{{ HETZNER_CLOUD }}"
-        zone: nettoken.de
-        record_type: AAAA
-        name: "*.nettoken.de"
-        value: "{{ hcloud_server_result.hcloud_server.ipv6_address }}"
-        ttl: 300
-      delegate_to: localhost
+      block:
+        - name: Aktualisiere bestehenden Wildcard-AAAA Record für *.nettoken.de
+          command: >-
+            hcloud dns record update {{ dns_aaaa_wildcard[0].id }} --value {{ hcloud_server_result.hcloud_server.ipv6_address }} --ttl 300
+          delegate_to: localhost
+          when: dns_aaaa_wildcard | length > 0
+        - name: Erstelle Wildcard-AAAA Record für *.nettoken.de
+          command: >-
+            hcloud dns record create nettoken.de AAAA --name "*.nettoken.de" --value {{ hcloud_server_result.hcloud_server.ipv6_address }} --ttl 300
+          delegate_to: localhost
+          when: dns_aaaa_wildcard | length == 0
       when: hcloud_server_result.hcloud_server.ipv6_address is defined and ((dns_aaaa_wildcard | length == 0) or (dns_aaaa_wildcard[0].value != hcloud_server_result.hcloud_server.ipv6_address))
