@@ -132,10 +132,6 @@
       set_fact:
         dns_a_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*') | selectattr('type', 'equalto', 'A') | list }}"
 
-    - name: Debug DNS A Records
-      debug:
-        msg: "Aktuelle A Records: nettoken.de: {{ dns_a_apex }}, *.nettoken.de: {{ dns_a_wildcard }}"
-
     - name: Setze DNS A Record für *.nettoken.de falls notwendig
       block:
         - name: Aktualisiere bestehenden Wildcard-A Record für *.nettoken.de
@@ -165,11 +161,6 @@
     - name: Setze AAAA Record Fakt für *.nettoken.de
       set_fact:
         dns_aaaa_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*.nettoken.de') | selectattr('type', 'equalto', 'AAAA') | list }}"
-      when: hostvars['localhost'].hcloud_server_result.hcloud_server.ipv6_address is defined
-
-    - name: Debug DNS AAAA Records
-      debug:
-        msg: "Aktuelle AAAA Records: nettoken.de: {{ dns_aaaa_apex }}, *.nettoken.de: {{ dns_aaaa_wildcard }}"
       when: hostvars['localhost'].hcloud_server_result.hcloud_server.ipv6_address is defined
 
     - name: Setze DNS AAAA Record für *.nettoken.de falls notwendig
