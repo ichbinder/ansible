@@ -104,18 +104,18 @@
         chdir: /root/npm
 
     - name: Hole A Records für nettoken.de (A und Wildcard)
-      command: hcloud dns record list nettoken.de --type A --output json
+      command: hcloud dns record list nettoken.de --output json
       register: a_records
       changed_when: false
       delegate_to: localhost
 
     - name: Setze A Record Fakt für nettoken.de
       set_fact:
-        dns_a_apex: "{{ a_records.stdout | from_json | selectattr('name', 'equalto', 'nettoken.de') | list }}"
+        dns_a_apex: "{{ a_records.stdout | from_json | selectattr('name', 'equalto', 'nettoken.de') | selectattr('type', 'equalto', 'A') | list }}"
 
     - name: Setze A Record Fakt für *.nettoken.de
       set_fact:
-        dns_a_wildcard: "{{ a_records.stdout | from_json | selectattr('name', 'equalto', '*.nettoken.de') | list }}"
+        dns_a_wildcard: "{{ a_records.stdout | from_json | selectattr('name', 'equalto', '*.nettoken.de') | selectattr('type', 'equalto', 'A') | list }}"
 
     - name: Debug DNS A Records
       debug:
@@ -150,7 +150,7 @@
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hcloud_server_result.hcloud_server.ipv4_address)
 
     - name: Hole AAAA Records für nettoken.de (A und Wildcard)
-      command: hcloud dns record list nettoken.de --type AAAA --output json
+      command: hcloud dns record list nettoken.de --output json
       register: aaaa_records
       changed_when: false
       delegate_to: localhost
@@ -158,12 +158,12 @@
 
     - name: Setze AAAA Record Fakt für nettoken.de
       set_fact:
-        dns_aaaa_apex: "{{ aaaa_records.stdout | from_json | selectattr('name', 'equalto', 'nettoken.de') | list }}"
+        dns_aaaa_apex: "{{ aaaa_records.stdout | from_json | selectattr('name', 'equalto', 'nettoken.de') | selectattr('type', 'equalto', 'AAAA') | list }}"
       when: hcloud_server_result.hcloud_server.ipv6_address is defined
 
     - name: Setze AAAA Record Fakt für *.nettoken.de
       set_fact:
-        dns_aaaa_wildcard: "{{ aaaa_records.stdout | from_json | selectattr('name', 'equalto', '*.nettoken.de') | list }}"
+        dns_aaaa_wildcard: "{{ aaaa_records.stdout | from_json | selectattr('name', 'equalto', '*.nettoken.de') | selectattr('type', 'equalto', 'AAAA') | list }}"
       when: hcloud_server_result.hcloud_server.ipv6_address is defined
 
     - name: Debug DNS AAAA Records
