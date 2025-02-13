@@ -103,19 +103,38 @@
       args:
         chdir: /root/npm
 
-    - name: Hole A Records für nettoken.de (A und Wildcard)
-      command: hcloud dns record list nettoken.de --output json
-      register: a_records
-      changed_when: false
+    # --- DNS-Verwaltung via Hetzner DNS API ---
+    - name: Hole Zone ID für nettoken.de
+      uri:
+        url: "https://dns.hetzner.com/api/v1/zones"
+        method: GET
+        headers:
+          Auth-API-Token: "{{ HETZNER_CLOUD }}"
+        return_content: yes
       delegate_to: localhost
+      register: zones_response
+
+    - name: Setze Zone ID Fakt
+      set_fact:
+        zone_id: "{{ (zones_response.json.zones | selectattr('name', 'equalto', 'nettoken.de') | list)[0].id }}"
+
+    - name: Hole DNS Records für nettoken.de
+      uri:
+        url: "https://dns.hetzner.com/api/v1/records?zone_id={{ zone_id }}"
+        method: GET
+        headers:
+          Auth-API-Token: "{{ HETZNER_CLOUD }}"
+        return_content: yes
+      delegate_to: localhost
+      register: dns_records_response
 
     - name: Setze A Record Fakt für nettoken.de
       set_fact:
-        dns_a_apex: "{{ a_records.stdout | from_json | selectattr('name', 'equalto', 'nettoken.de') | selectattr('type', 'equalto', 'A') | list }}"
+        dns_a_apex: "{{ dns_records_response.json.records | selectattr('name', 'equalto', 'nettoken.de') | selectattr('type', 'equalto', 'A') | list }}"
 
     - name: Setze A Record Fakt für *.nettoken.de
       set_fact:
-        dns_a_wildcard: "{{ a_records.stdout | from_json | selectattr('name', 'equalto', '*.nettoken.de') | selectattr('type', 'equalto', 'A') | list }}"
+        dns_a_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*.nettoken.de') | selectattr('type', 'equalto', 'A') | list }}"
 
     - name: Debug DNS A Records
       debug:
@@ -124,13 +143,25 @@
     - name: Setze DNS A Record für nettoken.de falls notwendig
       block:
         - name: Aktualisiere bestehenden A Record für nettoken.de
-          command: >-
-            hcloud dns record update {{ dns_a_apex[0].id }} --value {{ hcloud_server_result.hcloud_server.ipv4_address }} --ttl 300
+          uri:
+            url: "https://dns.hetzner.com/api/v1/records/{{ dns_a_apex[0].id }}"
+            method: PUT
+            headers:
+              Auth-API-Token: "{{ HETZNER_CLOUD }}"
+              Content-Type: "application/json"
+            body: "{{ {'name': 'nettoken.de', 'type': 'A', 'value': hcloud_server_result.hcloud_server.ipv4_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+            status_code: 200
           delegate_to: localhost
           when: dns_a_apex | length > 0
         - name: Erstelle A Record für nettoken.de
-          command: >-
-            hcloud dns record create nettoken.de A --name nettoken.de --value {{ hcloud_server_result.hcloud_server.ipv4_address }} --ttl 300
+          uri:
+            url: "https://dns.hetzner.com/api/v1/records"
+            method: POST
+            headers:
+              Auth-API-Token: "{{ HETZNER_CLOUD }}"
+              Content-Type: "application/json"
+            body: "{{ {'name': 'nettoken.de', 'type': 'A', 'value': hcloud_server_result.hcloud_server.ipv4_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+            status_code: 201
           delegate_to: localhost
           when: dns_a_apex | length == 0
       when: (dns_a_apex | length == 0) or (dns_a_apex[0].value != hcloud_server_result.hcloud_server.ipv4_address)
@@ -138,32 +169,37 @@
     - name: Setze DNS A Record für *.nettoken.de falls notwendig
       block:
         - name: Aktualisiere bestehenden Wildcard-A Record für *.nettoken.de
-          command: >-
-            hcloud dns record update {{ dns_a_wildcard[0].id }} --value {{ hcloud_server_result.hcloud_server.ipv4_address }} --ttl 300
+          uri:
+            url: "https://dns.hetzner.com/api/v1/records/{{ dns_a_wildcard[0].id }}"
+            method: PUT
+            headers:
+              Auth-API-Token: "{{ HETZNER_CLOUD }}"
+              Content-Type: "application/json"
+            body: "{{ {'name': '*.nettoken.de', 'type': 'A', 'value': hcloud_server_result.hcloud_server.ipv4_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+            status_code: 200
           delegate_to: localhost
           when: dns_a_wildcard | length > 0
         - name: Erstelle Wildcard-A Record für *.nettoken.de
-          command: >-
-            hcloud dns record create nettoken.de A --name "*.nettoken.de" --value {{ hcloud_server_result.hcloud_server.ipv4_address }} --ttl 300
+          uri:
+            url: "https://dns.hetzner.com/api/v1/records"
+            method: POST
+            headers:
+              Auth-API-Token: "{{ HETZNER_CLOUD }}"
+              Content-Type: "application/json"
+            body: "{{ {'name': '*.nettoken.de', 'type': 'A', 'value': hcloud_server_result.hcloud_server.ipv4_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+            status_code: 201
           delegate_to: localhost
           when: dns_a_wildcard | length == 0
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hcloud_server_result.hcloud_server.ipv4_address)
 
-    - name: Hole AAAA Records für nettoken.de (A und Wildcard)
-      command: hcloud dns record list nettoken.de --output json
-      register: aaaa_records
-      changed_when: false
-      delegate_to: localhost
-      when: hcloud_server_result.hcloud_server.ipv6_address is defined
-
     - name: Setze AAAA Record Fakt für nettoken.de
       set_fact:
-        dns_aaaa_apex: "{{ aaaa_records.stdout | from_json | selectattr('name', 'equalto', 'nettoken.de') | selectattr('type', 'equalto', 'AAAA') | list }}"
+        dns_aaaa_apex: "{{ dns_records_response.json.records | selectattr('name', 'equalto', 'nettoken.de') | selectattr('type', 'equalto', 'AAAA') | list }}"
       when: hcloud_server_result.hcloud_server.ipv6_address is defined
 
     - name: Setze AAAA Record Fakt für *.nettoken.de
       set_fact:
-        dns_aaaa_wildcard: "{{ aaaa_records.stdout | from_json | selectattr('name', 'equalto', '*.nettoken.de') | selectattr('type', 'equalto', 'AAAA') | list }}"
+        dns_aaaa_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*.nettoken.de') | selectattr('type', 'equalto', 'AAAA') | list }}"
       when: hcloud_server_result.hcloud_server.ipv6_address is defined
 
     - name: Debug DNS AAAA Records
@@ -174,13 +210,25 @@
     - name: Setze DNS AAAA Record für nettoken.de falls notwendig
       block:
         - name: Aktualisiere bestehenden AAAA Record für nettoken.de
-          command: >-
-            hcloud dns record update {{ dns_aaaa_apex[0].id }} --value {{ hcloud_server_result.hcloud_server.ipv6_address }} --ttl 300
+          uri:
+            url: "https://dns.hetzner.com/api/v1/records/{{ dns_aaaa_apex[0].id }}"
+            method: PUT
+            headers:
+              Auth-API-Token: "{{ HETZNER_CLOUD }}"
+              Content-Type: "application/json"
+            body: "{{ {'name': 'nettoken.de', 'type': 'AAAA', 'value': hcloud_server_result.hcloud_server.ipv6_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+            status_code: 200
           delegate_to: localhost
           when: dns_aaaa_apex | length > 0
         - name: Erstelle AAAA Record für nettoken.de
-          command: >-
-            hcloud dns record create nettoken.de AAAA --name nettoken.de --value {{ hcloud_server_result.hcloud_server.ipv6_address }} --ttl 300
+          uri:
+            url: "https://dns.hetzner.com/api/v1/records"
+            method: POST
+            headers:
+              Auth-API-Token: "{{ HETZNER_CLOUD }}"
+              Content-Type: "application/json"
+            body: "{{ {'name': 'nettoken.de', 'type': 'AAAA', 'value': hcloud_server_result.hcloud_server.ipv6_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+            status_code: 201
           delegate_to: localhost
           when: dns_aaaa_apex | length == 0
       when: hcloud_server_result.hcloud_server.ipv6_address is defined and ((dns_aaaa_apex | length == 0) or (dns_aaaa_apex[0].value != hcloud_server_result.hcloud_server.ipv6_address))
@@ -188,13 +236,25 @@
     - name: Setze DNS AAAA Record für *.nettoken.de falls notwendig
       block:
         - name: Aktualisiere bestehenden Wildcard-AAAA Record für *.nettoken.de
-          command: >-
-            hcloud dns record update {{ dns_aaaa_wildcard[0].id }} --value {{ hcloud_server_result.hcloud_server.ipv6_address }} --ttl 300
+          uri:
+            url: "https://dns.hetzner.com/api/v1/records/{{ dns_aaaa_wildcard[0].id }}"
+            method: PUT
+            headers:
+              Auth-API-Token: "{{ HETZNER_CLOUD }}"
+              Content-Type: "application/json"
+            body: "{{ {'name': '*.nettoken.de', 'type': 'AAAA', 'value': hcloud_server_result.hcloud_server.ipv6_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+            status_code: 200
           delegate_to: localhost
           when: dns_aaaa_wildcard | length > 0
         - name: Erstelle Wildcard-AAAA Record für *.nettoken.de
-          command: >-
-            hcloud dns record create nettoken.de AAAA --name "*.nettoken.de" --value {{ hcloud_server_result.hcloud_server.ipv6_address }} --ttl 300
+          uri:
+            url: "https://dns.hetzner.com/api/v1/records"
+            method: POST
+            headers:
+              Auth-API-Token: "{{ HETZNER_CLOUD }}"
+              Content-Type: "application/json"
+            body: "{{ {'name': '*.nettoken.de', 'type': 'AAAA', 'value': hcloud_server_result.hcloud_server.ipv6_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+            status_code: 201
           delegate_to: localhost
           when: dns_aaaa_wildcard | length == 0
       when: hcloud_server_result.hcloud_server.ipv6_address is defined and ((dns_aaaa_wildcard | length == 0) or (dns_aaaa_wildcard[0].value != hcloud_server_result.hcloud_server.ipv6_address))
