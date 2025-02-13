@@ -16,6 +16,10 @@
         api_token: "{{ HETZNER_CLOUD }}"
       register: hcloud_server_result
 
+    - name: Ausgabe der Variable hcloud_server_result zur Überprüfung
+      debug:
+        var: hcloud_server_result
+
     - name: Füge den neuen Server zum Inventory hinzu
       add_host:
         name: "{{ hcloud_server_result.hcloud_server.ipv4_address }}"
