@@ -38,74 +38,74 @@
   become: true
   gather_facts: true
   tasks:
-    # - name: Aktualisiere den Apt-Cache
-    #   apt:
-    #     update_cache: true
+    - name: Aktualisiere den Apt-Cache
+      apt:
+        update_cache: true
 
-    # - name: Installiere benötigte Pakete
-    #   apt:
-    #     name:
-    #       - apt-transport-https
-    #       - ca-certificates
-    #       - curl
-    #       - software-properties-common
-    #     state: present
+    - name: Installiere benötigte Pakete
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
 
-    # - name: Docker GPG-Schlüssel hinzufügen
-    #   apt_key:
-    #     url: https://download.docker.com/linux/ubuntu/gpg
-    #     state: present
+    - name: Docker GPG-Schlüssel hinzufügen
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
 
-    # - name: Docker Repository hinzufügen
-    #   apt_repository:
-    #     repo: "deb [arch=arm64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
-    #     state: present
+    - name: Docker Repository hinzufügen
+      apt_repository:
+        repo: "deb [arch=arm64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        state: present
 
-    # - name: Aktualisiere Apt-Cache nach dem Hinzufügen des Repositories
-    #   apt:
-    #     update_cache: true
+    - name: Aktualisiere Apt-Cache nach dem Hinzufügen des Repositories
+      apt:
+        update_cache: true
 
-    # - name: Docker installieren
-    #   apt:
-    #     name: docker-ce
-    #     state: present
+    - name: Docker installieren
+      apt:
+        name: docker-ce
+        state: present
 
-    # - name: Docker Compose Plugin installieren
-    #   apt:
-    #     name: docker-compose-plugin
-    #     state: present
+    - name: Docker Compose Plugin installieren
+      apt:
+        name: docker-compose-plugin
+        state: present
 
-    # - name: Erstelle Verzeichnisse für Nginx Proxy Manager
-    #   file:
-    #     path: "{{ item }}"
-    #     state: directory
-    #     mode: "0755"
-    #   loop:
-    #     - /root/npm/data
-    #     - /root/npm/letsencrypt
+    - name: Erstelle Verzeichnisse für Nginx Proxy Manager
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /root/npm/data
+        - /root/npm/letsencrypt
 
-    # - name: Kopiere die Docker Compose Datei für Nginx Proxy Manager
-    #   copy:
-    #     dest: /root/npm/docker-compose.yml
-    #     content: |
-    #       version: "3"
-    #       services:
-    #         app:
-    #           image: jc21/nginx-proxy-manager:latest
-    #           container_name: nginx-proxy-manager
-    #           restart: unless-stopped
-    #           ports:
-    #             - "80:80"
-    #             - "81:81"
-    #             - "443:443"
-    #           volumes:
-    #             - ./data:/data
-    #             - ./letsencrypt:/etc/letsencrypt
+    - name: Kopiere die Docker Compose Datei für Nginx Proxy Manager
+      copy:
+        dest: /root/npm/docker-compose.yml
+        content: |
+          version: "3"
+          services:
+            app:
+              image: jc21/nginx-proxy-manager:latest
+              container_name: nginx-proxy-manager
+              restart: unless-stopped
+              ports:
+                - "80:80"
+                - "81:81"
+                - "443:443"
+              volumes:
+                - ./data:/data
+                - ./letsencrypt:/etc/letsencrypt
 
-    # - name: Starte den Nginx Proxy Manager Container via Docker Compose
-    #   shell: docker compose -f /root/npm/docker-compose.yml up -d
-    #   args:
-    #     chdir: /root/npm
+    - name: Starte den Nginx Proxy Manager Container via Docker Compose
+      shell: docker compose -f /root/npm/docker-compose.yml up -d
+      args:
+        chdir: /root/npm
 
     # --- DNS-Verwaltung via Hetzner DNS API ---
     - name: Hole Zone ID für nettoken.de
@@ -161,34 +161,3 @@
           delegate_to: localhost
           when: dns_a_wildcard | length == 0
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address)
-
-    - name: Setze AAAA Record Fakt für *.nettoken.de
-      set_fact:
-        dns_aaaa_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*.nettoken.de') | selectattr('type', 'equalto', 'AAAA') | list }}"
-      when: hostvars['localhost'].hcloud_server_result.hcloud_server.ipv6_address is defined
-
-    - name: Setze DNS AAAA Record für *.nettoken.de falls notwendig
-      block:
-        - name: Aktualisiere bestehenden Wildcard-AAAA Record für *.nettoken.de
-          uri:
-            url: "https://dns.hetzner.com/api/v1/records/{{ dns_aaaa_wildcard[0].id }}"
-            method: PUT
-            headers:
-              Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-              Content-Type: "application/json"
-            body: "{{ {'name': '*', 'type': 'AAAA', 'value': hostvars['localhost'].hcloud_server_result.hcloud_server.ipv6_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
-            status_code: [200, 201]
-          delegate_to: localhost
-          when: dns_aaaa_wildcard | length > 0
-        - name: Erstelle Wildcard-AAAA Record für *.nettoken.de
-          uri:
-            url: "https://dns.hetzner.com/api/v1/records"
-            method: POST
-            headers:
-              Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-              Content-Type: "application/json"
-            body: "{{ {'name': '*', 'type': 'AAAA', 'value': hostvars['localhost'].hcloud_server_result.hcloud_server.ipv6_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
-            status_code: [200, 201]
-          delegate_to: localhost
-          when: dns_aaaa_wildcard | length == 0
-      when: hostvars['localhost'].hcloud_server_result.hcloud_server.ipv6_address is defined and ((dns_aaaa_wildcard | length == 0) or (dns_aaaa_wildcard[0].value != hostvars['localhost'].hcloud_server_result.hcloud_server.ipv6_address))
