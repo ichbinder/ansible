@@ -1,7 +1,7 @@
 ---
 - name: Erstelle Reverse Proxy Eintrag über API Wrapper Bash Script
   hosts: localhost
-  gather_facts: no
+  gather_facts: false
   vars:
     proxy_ip: "192.168.1.100"
     proxy_port: 8080
