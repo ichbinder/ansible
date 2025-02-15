@@ -168,7 +168,7 @@
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address)
 
     - name: Registriere npm Domain im Nginx Proxy Manager via Bash Script
-      shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hcloud_server_result.hcloud_server.ipv4_address }} -p 8080 --generate-cert {{ domain }} {{ NPM_ADMIN_EMAIL }}"
+      shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }} -p 8080 --generate-cert {{ domain }} {{ NPM_ADMIN_EMAIL }}"
       register: npm_registration_output
 
     - name: Zeige Ausgabe der Domainregistrierung an
