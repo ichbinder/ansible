@@ -37,6 +37,8 @@
   hosts: created_servers
   become: true
   gather_facts: true
+  vars:
+    domain: mediatoken.de
   tasks:
     - name: Aktualisiere den Apt-Cache
       apt:
@@ -111,7 +113,7 @@
         chdir: /root/npm
 
     # --- DNS-Verwaltung via Hetzner DNS API ---
-    - name: Hole Zone ID für nettoken.de
+    - name: Hole Zone ID für {{ domain }}
       uri:
         url: "https://dns.hetzner.com/api/v1/zones"
         method: GET
@@ -123,9 +125,9 @@
 
     - name: Setze Zone ID Fakt
       set_fact:
-        zone_id: "{{ (zones_response.json.zones | selectattr('name', 'equalto', 'nettoken.de') | list)[0].id }}"
+        zone_id: "{{ (zones_response.json.zones | selectattr('name', 'equalto', domain) | list)[0].id }}"
 
-    - name: Hole DNS Records für nettoken.de
+    - name: Hole DNS Records für {{ domain }}
       uri:
         url: "https://dns.hetzner.com/api/v1/records?zone_id={{ zone_id }}"
         method: GET
@@ -135,13 +137,13 @@
       delegate_to: localhost
       register: dns_records_response
 
-    - name: Setze A Record Fakt für *.nettoken.de
+    - name: Setze A Record Fakt für *.{{ domain }}
       set_fact:
         dns_a_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*') | selectattr('type', 'equalto', 'A') | list }}"
 
-    - name: Setze DNS A Record für *.nettoken.de falls notwendig
+    - name: Setze DNS A Record für *.{{ domain }} falls notwendig
       block:
-        - name: Aktualisiere bestehenden Wildcard-A Record für *.nettoken.de
+        - name: Aktualisiere bestehenden Wildcard-A Record für *.{{ domain }}
           uri:
             url: "https://dns.hetzner.com/api/v1/records/{{ dns_a_wildcard[0].id }}"
             method: PUT
@@ -152,7 +154,7 @@
             status_code: [200, 201]
           delegate_to: localhost
           when: dns_a_wildcard | length > 0
-        - name: Erstelle Wildcard-A Record für *.nettoken.de
+        - name: Erstelle Wildcard-A Record für *.{{ domain }}
           uri:
             url: "https://dns.hetzner.com/api/v1/records"
             method: POST

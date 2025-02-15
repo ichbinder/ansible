@@ -2,6 +2,8 @@
 - name: Create a server in Hetzner Cloud
   hosts: localhost
   gather_facts: false
+  vars:
+    domain_suffix: mediatoken.de
 
   tasks:
     - name: Create the "{{ SERVER_NAME }}" server
@@ -143,3 +145,11 @@
       shell: docker compose -f /root/docker-compose.yml up -d
       args:
         chdir: /root
+
+    - name: Registriere SABnzbd Domain im Nginx Proxy Manager via Bash Script
+      shell: "/root/npm/nginx_proxy_manager_cli.sh -d sahbzbd.{{ domain_suffix }} -i {{ hcloud_server_result.hcloud_server.ipv4_address }} -p 8080"
+      register: npm_registration_output
+
+    - name: Zeige Ausgabe der Domainregistrierung an
+      debug:
+        var: npm_registration_output
