@@ -39,6 +39,8 @@
   hosts: created_servers
   become: true
   gather_facts: true
+  vars:
+    domain: mediatoken.de
   tasks:
     - name: Update the Apt cache
       apt:
@@ -170,6 +172,8 @@
 - name: Register the domain in the Nginx Proxy Manager via Bash script
   hosts: localhost
   become: true
+  vars:
+    domain: mediatoken.de
   tasks:
     - name: Delete directory content from /root/npm/token/
       command: find /root/npm/token/ -mindepth 1 -delete
