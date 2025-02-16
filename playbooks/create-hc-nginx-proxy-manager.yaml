@@ -2,8 +2,6 @@
 - name: Create a Server in Hetzner Cloud
   hosts: localhost
   gather_facts: false
-  vars:
-    domain: mediatoken.de
   tasks:
     - name: Create the NPM Server
       hetzner.hcloud.hcloud_server:
@@ -39,8 +37,6 @@
   hosts: created_servers
   become: true
   gather_facts: true
-  vars:
-    domain: mediatoken.de
   tasks:
     - name: Update the Apt cache
       apt:
@@ -114,71 +110,29 @@
       args:
         chdir: /root/npm
 
-    # --- DNS management via Hetzner DNS API ---
-    - name: Retrieve Zone ID for {{ domain }}
-      uri:
-        url: "https://dns.hetzner.com/api/v1/zones"
-        method: GET
-        headers:
-          Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-        return_content: yes
-      delegate_to: localhost
-      register: zones_response
-
-    - name: Set Zone ID fact
-      set_fact:
-        zone_id: "{{ (zones_response.json.zones | selectattr('name', 'equalto', domain) | list)[0].id }}"
-
-    - name: Retrieve DNS records for {{ domain }}
-      uri:
-        url: "https://dns.hetzner.com/api/v1/records?zone_id={{ zone_id }}"
-        method: GET
-        headers:
-          Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-        return_content: yes
-      delegate_to: localhost
-      register: dns_records_response
-
-    - name: Set A record fact for *.{{ domain }}
-      set_fact:
-        dns_a_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*') | selectattr('type', 'equalto', 'A') | list }}"
-
-    - name: Set DNS A record for *.{{ domain }} if necessary
-      block:
-        - name: Update existing wildcard A record for *.{{ domain }}
-          uri:
-            url: "https://dns.hetzner.com/api/v1/records/{{ dns_a_wildcard[0].id }}"
-            method: PUT
-            headers:
-              Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-              Content-Type: "application/json"
-            body: "{{ {'name': '*', 'type': 'A', 'value': hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
-            status_code: [200, 201]
-          delegate_to: localhost
-          when: dns_a_wildcard | length > 0
-        - name: Create wildcard A record for *.{{ domain }}
-          uri:
-            url: "https://dns.hetzner.com/api/v1/records"
-            method: POST
-            headers:
-              Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-              Content-Type: "application/json"
-            body: "{{ {'name': '*', 'type': 'A', 'value': hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
-            status_code: [200, 201]
-          delegate_to: localhost
-          when: dns_a_wildcard | length == 0
-      when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address)
+- name: Add domain to Hetzner DNS API
+  hosts: localhost
+  become: true
+  gather_facts: true
+  vars:
+    DOMAIN: mediatoken.de
+    tasks:
+      - include_tasks: hetzner_dns_management.yaml
+        vars:
+          DOMAIN: "{{ DOMAIN }}"
+          IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
+          HETZNER_API_TOKEN: "{{ HETZNER_API_TOKEN }}"
 
 - name: Run tasks with additional variables
   hosts: localhost
   become: true
   gather_facts: true
   vars:
-    domain: npm.mediatoken.de
+    DOMAIN: npm.mediatoken.de
   tasks:
     - include_tasks: add-domain-ssl-npm.yaml
       vars:
-        DOMAIN: "{{ domain }}"
+        DOMAIN: "{{ DOMAIN }}"
         IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
         NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
         PORT: "81"

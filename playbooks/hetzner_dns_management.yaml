@@ -1,57 +1,49 @@
----
-- name: Manage Wildcard A Record for Domain via Hetzner DNS API
-  hosts: localhost
-  gather_facts: false
-  vars:
-    DOMAIN: "{{ DOMAIN }}"
-    SERVER_IP: "{{ SERVER_IP }}"
-  tasks:
-    - name: Retrieve Zone ID for {{ DOMAIN }}
+- name: Retrieve Zone ID for {{ DOMAIN }}
+  uri:
+    url: "https://dns.hetzner.com/api/v1/zones"
+    method: GET
+    headers:
+      Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
+    return_content: yes
+  register: zones_response
+
+- name: Set Zone ID fact
+  set_fact:
+    zone_id: "{{ (zones_response.json.zones | selectattr('name', 'equalto', DOMAIN) | list)[0].id }}"
+
+- name: Retrieve DNS records for {{ DOMAIN }}
+  uri:
+    url: "https://dns.hetzner.com/api/v1/records?zone_id={{ zone_id }}"
+    method: GET
+    headers:
+      Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
+    return_content: yes
+  register: dns_records_response
+
+- name: Set A record fact for * record of {{ DOMAIN }}
+  set_fact:
+    dns_a_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*') | selectattr('type', 'equalto', 'A') | list }}"
+
+- name: Manage Wildcard A Record if necessary
+  block:
+    - name: Update existing wildcard A record
       uri:
-        url: "https://dns.hetzner.com/api/v1/zones"
-        method: GET
+        url: "https://dns.hetzner.com/api/v1/records/{{ dns_a_wildcard[0].id }}"
+        method: PUT
         headers:
           Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-        return_content: yes
-      register: zones_response
-
-    - name: Set Zone ID fact
-      set_fact:
-        zone_id: "{{ (zones_response.json.zones | selectattr('name', 'equalto', DOMAIN) | list)[0].id }}"
-
-    - name: Retrieve DNS records for {{ DOMAIN }}
+          Content-Type: "application/json"
+        body: "{{ {'name': '*', 'type': 'A', 'value': SERVER_IP, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+        status_code: [200, 201]
+      when: dns_a_wildcard | length > 0
+    - name: Create wildcard A record
       uri:
-        url: "https://dns.hetzner.com/api/v1/records?zone_id={{ zone_id }}"
-        method: GET
+        url: "https://dns.hetzner.com/api/v1/records"
+        method: POST
         headers:
           Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-        return_content: yes
-      register: dns_records_response
-
-    - name: Set A record fact for * record of {{ DOMAIN }}
-      set_fact:
-        dns_a_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*') | selectattr('type', 'equalto', 'A') | list }}"
-
-    - name: Manage Wildcard A Record if necessary
-      block:
-        - name: Update existing wildcard A record
-          uri:
-            url: "https://dns.hetzner.com/api/v1/records/{{ dns_a_wildcard[0].id }}"
-            method: PUT
-            headers:
-              Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-              Content-Type: "application/json"
-            body: "{{ {'name': '*', 'type': 'A', 'value': SERVER_IP, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
-            status_code: [200, 201]
-          when: dns_a_wildcard | length > 0
-        - name: Create wildcard A record
-          uri:
-            url: "https://dns.hetzner.com/api/v1/records"
-            method: POST
-            headers:
-              Auth-API-Token: "{{ HETZNER_API_TOKEN }}"
-              Content-Type: "application/json"
-            body: "{{ {'name': '*', 'type': 'A', 'value': SERVER_IP, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
-            status_code: [200, 201]
-          when: dns_a_wildcard | length == 0
-      when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != SERVER_IP)
+          Content-Type: "application/json"
+        body: "{{ {'name': '*', 'type': 'A', 'value': SERVER_IP, 'ttl': 300, 'zone_id': zone_id} | to_json }}"
+        status_code: [200, 201]
+      when: dns_a_wildcard | length == 0
+  when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != SERVER_IP)
