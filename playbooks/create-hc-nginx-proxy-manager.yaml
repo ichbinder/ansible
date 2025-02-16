@@ -114,25 +114,21 @@
   hosts: localhost
   become: true
   gather_facts: true
-  vars:
-    DOMAIN: "{{ NPM_DOMAIN }}"
-    tasks:
-      - include_tasks: hetzner_dns_management.yaml
-        vars:
-          DOMAIN: "{{ DOMAIN }}"
-          IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
-          HETZNER_API_TOKEN: "{{ HETZNER_API_TOKEN }}"
+  tasks:
+    - include_tasks: hetzner_dns_management.yaml
+      vars:
+        DOMAIN: "{{ NPM_DOMAIN }}"
+        IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
+        HETZNER_API_TOKEN: "{{ HETZNER_API_TOKEN }}"
 
 - name: Run tasks with additional variables
   hosts: localhost
   become: true
   gather_facts: true
-  vars:
-    DOMAIN: "{{ NPM_DOMAIN }}"
   tasks:
     - include_tasks: add-domain-ssl-npm.yaml
       vars:
-        DOMAIN: "{{ DOMAIN }}"
+        DOMAIN: "{{ NPM_DOMAIN }}"
         IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
         NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
         PORT: "81"
