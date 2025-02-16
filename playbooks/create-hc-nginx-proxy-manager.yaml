@@ -169,50 +169,9 @@
           when: dns_a_wildcard | length == 0
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address)
 
-- name: Register the domain in the Nginx Proxy Manager via Bash script
-  hosts: localhost
-  become: true
-  vars:
-    domain: mediatoken.de
-  tasks:
-    - name: Delete directory content from /root/npm/token/
-      command: find /root/npm/token/ -mindepth 1 -delete
-
-    - name: Generate a token for the domain
-      shell: "/root/npm/nginx_proxy_manager_cli.sh"
-      register: npm_generate_token_output
-
-    - name: Show generate token output
-      debug:
-        var: npm_generate_token_output
-
-    - name: Register npm domain in the Nginx Proxy Manager via Bash script
-      shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }} -p 81"
-      register: npm_registration_output
-
-    - name: Show domain registration output
-      debug:
-        var: npm_registration_output
-
-    - name: Create SSL certificate for npm.{{ domain }}
-      shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert npm.{{ domain }} {{ NPM_ADMIN_EMAIL }} -y"
-      register: npm_create_ssl_output
-
-    - name: Show create ssl certificate output
-      debug:
-        var: npm_create_ssl_output
-    - name: Find the id of the domain npm.{{ domain }}
-      shell: "/root/npm/nginx_proxy_manager_cli.sh --host-search npm.{{ domain }} --machine | sed -n '/^\\[/,/^\\]/p' | jq '.[0].id'"
-      register: npm_get_domain_id_output
-
-    - name: Show domain list output
-      debug:
-        var: npm_get_domain_id_output
-
-    - name: Connect domain to ssl certificate
-      shell: "/root/npm/nginx_proxy_manager_cli.sh --host-ssl-enable {{ npm_get_domain_id_output.stdout }}"
-      register: npm_connect_domain_to_ssl_output
-
-    - name: Show connect domain to ssl certificate output
-      debug:
-        var: npm_connect_domain_to_ssl_output
+    - include_tasks: add-domain-ssl-npm.yaml
+      vars:
+        DOMAIN: "{{ domain }}"
+        IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
+        NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
+        PORT: "81"

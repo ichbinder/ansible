@@ -1,0 +1,56 @@
+---
+- name: Register the domain in the Nginx Proxy Manager via Bash script
+  hosts: localhost
+  become: true
+  gather_facts: false
+  vars:
+    DOMAIN: "{{ DOMAIN }}"
+    IP: "{{ IP }}"
+    NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
+    PORT: "{{ PORT }}"
+  tasks:
+    - name: Delete directory content from /root/npm/token/
+      command: find /root/npm/token/ -mindepth 1 -delete
+
+    - name: Generate a token for the domain
+      shell: "/root/npm/nginx_proxy_manager_cli.sh"
+      register: npm_generate_token_output
+
+    - name: Show generate token output
+      debug:
+        var: npm_generate_token_output
+
+    - name: Register npm domain in the Nginx Proxy Manager via Bash script
+      shell: "/root/npm/nginx_proxy_manager_cli.sh -d {{ DOMAIN }} -i {{ IP }} -p {{ PORT }}"
+      register: npm_registration_output
+
+    - name: Show domain registration output
+      debug:
+        var: npm_registration_output
+
+    - name: Create SSL certificate for {{ DOMAIN }}
+      shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert {{ DOMAIN }} {{ NPM_ADMIN_EMAIL }} -y"
+      register: npm_create_ssl_output
+
+    - name: Wait for 20 seconds
+      pause:
+        seconds: 20
+
+    - name: Show create ssl certificate output
+      debug:
+        var: npm_create_ssl_output
+    - name: Find the id of the domain {{ DOMAIN }}
+      shell: "/root/npm/nginx_proxy_manager_cli.sh --host-search {{ DOMAIN }} --machine | sed -n '/^\\[/,/^\\]/p' | jq '.[0].id'"
+      register: npm_get_domain_id_output
+
+    - name: Show domain list output
+      debug:
+        var: npm_get_domain_id_output
+
+    - name: Connect domain to ssl certificate
+      shell: "/root/npm/nginx_proxy_manager_cli.sh --host-ssl-enable {{ npm_get_domain_id_output.stdout }}"
+      register: npm_connect_domain_to_ssl_output
+
+    - name: Show connect domain to ssl certificate output
+      debug:
+        var: npm_connect_domain_to_ssl_output
