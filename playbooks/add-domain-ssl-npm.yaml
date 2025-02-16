@@ -1,12 +1,12 @@
 ---
-- name: Register the domain in the Nginx Proxy Manager via Bash script
-  hosts: localhost
+- hosts: localhost
   become: true
   vars:
     DOMAIN: "{{ DOMAIN }}"
     IP: "{{ IP }}"
     NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
     PORT: "{{ PORT }}"
+  name: Register the domain in the Nginx Proxy Manager via Bash script
   tasks:
     - name: Delete directory content from /root/npm/token/
       command: find /root/npm/token/ -mindepth 1 -delete
