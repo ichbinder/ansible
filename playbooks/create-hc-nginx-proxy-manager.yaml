@@ -167,6 +167,14 @@
           when: dns_a_wildcard | length == 0
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address)
 
+    - name: Remove all tokens
+      shell: "rm /root/npm/token/*"
+      register: npm_remove_tokens_output
+
+    - name: Show remove tokens output
+      debug:
+        var: npm_remove_tokens_output
+
     - name: Registriere npm Domain im Nginx Proxy Manager via Bash Script
       shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }} -p 8080"
       register: npm_registration_output
