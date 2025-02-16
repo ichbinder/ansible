@@ -1,9 +1,9 @@
 ---
-- name: Erzeuge einen Server in der Hetzner Cloud
+- name: Create a Server in Hetzner Cloud
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Erstelle den Server NPM
+    - name: Create the NPM Server
       hetzner.hcloud.hcloud_server:
         state: present
         name: NginxProxyManager
@@ -20,31 +20,31 @@
       debug:
         var: hcloud_server_result
 
-    - name: Füge den neuen Server zum Inventory hinzu
+    - name: Add the new server to the inventory
       add_host:
         name: "{{ hcloud_server_result.hcloud_server.ipv4_address }}"
         groups: created_servers
         ansible_user: root
 
-    - name: Warte, bis SSH verfügbar ist
+    - name: Wait until SSH is available
       wait_for:
         host: "{{ hcloud_server_result.hcloud_server.ipv4_address }}"
         port: 22
         delay: 10
         timeout: 300
 
-- name: Konfiguriere den Server - Docker installieren und Nginx Proxy Manager deployen
+- name: Configure the Server - Install Docker and Deploy Nginx Proxy Manager
   hosts: created_servers
   become: true
   gather_facts: true
   vars:
     domain: mediatoken.de
   tasks:
-    - name: Aktualisiere den Apt-Cache
+    - name: Update the Apt cache
       apt:
         update_cache: true
 
-    - name: Installiere benötigte Pakete
+    - name: Install required packages
       apt:
         name:
           - apt-transport-https
@@ -53,31 +53,31 @@
           - software-properties-common
         state: present
 
-    - name: Docker GPG-Schlüssel hinzufügen
+    - name: Add Docker GPG key
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
-    - name: Docker Repository hinzufügen
+    - name: Add Docker repository
       apt_repository:
         repo: "deb [arch=arm64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
         state: present
 
-    - name: Aktualisiere Apt-Cache nach dem Hinzufügen des Repositories
+    - name: Update the Apt cache after adding the repository
       apt:
         update_cache: true
 
-    - name: Docker installieren
+    - name: Install Docker
       apt:
         name: docker-ce
         state: present
 
-    - name: Docker Compose Plugin installieren
+    - name: Install Docker Compose plugin
       apt:
         name: docker-compose-plugin
         state: present
 
-    - name: Erstelle Verzeichnisse für Nginx Proxy Manager
+    - name: Create directories for Nginx Proxy Manager
       file:
         path: "{{ item }}"
         state: directory
@@ -86,7 +86,7 @@
         - /root/npm/data
         - /root/npm/letsencrypt
 
-    - name: Kopiere die Docker Compose Datei für Nginx Proxy Manager
+    - name: Copy the Docker Compose file for Nginx Proxy Manager
       copy:
         dest: /root/npm/docker-compose.yml
         content: |
@@ -107,13 +107,13 @@
                 INITIAL_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
                 INITIAL_ADMIN_PASSWORD: "{{ NPM_ADMIN_PASSWORD }}"
 
-    - name: Starte den Nginx Proxy Manager Container via Docker Compose
+    - name: Start the Nginx Proxy Manager container via Docker Compose
       shell: docker compose -f /root/npm/docker-compose.yml up -d
       args:
         chdir: /root/npm
 
-    # --- DNS-Verwaltung via Hetzner DNS API ---
-    - name: Hole Zone ID für {{ domain }}
+    # --- DNS management via Hetzner DNS API ---
+    - name: Retrieve Zone ID for {{ domain }}
       uri:
         url: "https://dns.hetzner.com/api/v1/zones"
         method: GET
@@ -123,11 +123,11 @@
       delegate_to: localhost
       register: zones_response
 
-    - name: Setze Zone ID Fakt
+    - name: Set Zone ID fact
       set_fact:
         zone_id: "{{ (zones_response.json.zones | selectattr('name', 'equalto', domain) | list)[0].id }}"
 
-    - name: Hole DNS Records für {{ domain }}
+    - name: Retrieve DNS records for {{ domain }}
       uri:
         url: "https://dns.hetzner.com/api/v1/records?zone_id={{ zone_id }}"
         method: GET
@@ -137,13 +137,13 @@
       delegate_to: localhost
       register: dns_records_response
 
-    - name: Setze A Record Fakt für *.{{ domain }}
+    - name: Set A record fact for *.{{ domain }}
       set_fact:
         dns_a_wildcard: "{{ dns_records_response.json.records | selectattr('name', 'equalto', '*') | selectattr('type', 'equalto', 'A') | list }}"
 
-    - name: Setze DNS A Record für *.{{ domain }} falls notwendig
+    - name: Set DNS A record for *.{{ domain }} if necessary
       block:
-        - name: Aktualisiere bestehenden Wildcard-A Record für *.{{ domain }}
+        - name: Update existing wildcard A record for *.{{ domain }}
           uri:
             url: "https://dns.hetzner.com/api/v1/records/{{ dns_a_wildcard[0].id }}"
             method: PUT
@@ -154,7 +154,7 @@
             status_code: [200, 201]
           delegate_to: localhost
           when: dns_a_wildcard | length > 0
-        - name: Erstelle Wildcard-A Record für *.{{ domain }}
+        - name: Create wildcard A record for *.{{ domain }}
           uri:
             url: "https://dns.hetzner.com/api/v1/records"
             method: POST
@@ -167,15 +167,14 @@
           when: dns_a_wildcard | length == 0
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address)
 
-    - name: Remove all tokens
-      shell: "/usr/bin/rm -fr /root/npm/token/*"
-      register: npm_remove_tokens_output
+- name: Register the domain in the Nginx Proxy Manager via Bash script
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Delete directory content from /root/npm/token/
+      command: find /root/npm/token/ -mindepth 1 -delete
 
-    - name: Show remove tokens output
-      debug:
-        var: npm_remove_tokens_output
-
-    - name: Registriere npm Domain im Nginx Proxy Manager via Bash Script
+    - name: Register npm domain in the Nginx Proxy Manager via Bash script
       shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }} -p 8080"
       register: npm_registration_output
 
@@ -183,7 +182,7 @@
       debug:
         var: npm_registration_output
 
-    - name: Create ssl certificate for npm.{{ domain }}
+    - name: Create SSL certificate for npm.{{ domain }}
       shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert npm.{{ domain }} {{ NPM_ADMIN_EMAIL }} -y"
       register: npm_create_ssl_output
 
