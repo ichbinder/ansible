@@ -187,7 +187,7 @@
         var: npm_generate_token_output
 
     - name: Register npm domain in the Nginx Proxy Manager via Bash script
-      shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }} -p 8080"
+      shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }} -p 81"
       register: npm_registration_output
 
     - name: Show domain registration output
@@ -211,7 +211,7 @@
         var: npm_get_domain_id_output
 
     - name: Connect domain to ssl certificate
-      shell: "/root/npm/nginx_proxy_manager_cli.sh --host-ssl-enable {{ npm_get_domain_id_output }}"
+      shell: "/root/npm/nginx_proxy_manager_cli.sh --host-ssl-enable {{ npm_get_domain_id_output.stdout | regex_replace('\\x1b\\[[0-9;]m', '') | trim }}"
       register: npm_connect_domain_to_ssl_output
 
     - name: Show connect domain to ssl certificate output
