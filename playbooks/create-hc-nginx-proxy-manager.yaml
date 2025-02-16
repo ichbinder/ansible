@@ -16,7 +16,7 @@
         api_token: "{{ HETZNER_CLOUD }}"
       register: hcloud_server_result
 
-    - name: Ausgabe der Variable hcloud_server_result zur Überprüfung
+    - name: Show hcloud_server_result
       debug:
         var: hcloud_server_result
 
@@ -168,9 +168,33 @@
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address)
 
     - name: Registriere npm Domain im Nginx Proxy Manager via Bash Script
-      shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }} -p 8080 --generate-cert {{ domain }} {{ NPM_ADMIN_EMAIL }}"
+      shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }} -p 8080"
       register: npm_registration_output
 
-    - name: Zeige Ausgabe der Domainregistrierung an
+    - name: Show domain registration output
       debug:
         var: npm_registration_output
+
+    - name: Create ssl certificate for npm.{{ domain }}
+      shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert npm.{{ domain }} {{ NPM_ADMIN_EMAIL }} -y"
+      register: npm_create_ssl_output
+
+    - name: Show create ssl certificate output
+      debug:
+        var: npm_create_ssl_output
+
+    - name: Find the id of the domain npm.{{ domain }}
+      shell: "/root/npm/nginx_proxy_manager_cli.sh --host-search npm.{{ domain }} | grep id: | cut -d' ' -f4"
+      register: npm_get_domain_id_output
+
+    - name: Show domain list output
+      debug:
+        var: npm_get_domain_id_output
+
+    - name: Connect domain to ssl certificate
+      shell: "/root/npm/nginx_proxy_manager_cli.sh --host-ssl-enable {{ npm_get_domain_id_output }}"
+      register: npm_connect_domain_to_ssl_output
+
+    - name: Show connect domain to ssl certificate output
+      debug:
+        var: npm_connect_domain_to_ssl_output
