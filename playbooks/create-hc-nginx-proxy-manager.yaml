@@ -2,6 +2,8 @@
 - name: Create a Server in Hetzner Cloud
   hosts: localhost
   gather_facts: false
+  vars:
+    domain: mediatoken.de
   tasks:
     - name: Create the NPM Server
       hetzner.hcloud.hcloud_server:
@@ -37,8 +39,6 @@
   hosts: created_servers
   become: true
   gather_facts: true
-  vars:
-    domain: mediatoken.de
   tasks:
     - name: Update the Apt cache
       apt:
