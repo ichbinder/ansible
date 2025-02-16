@@ -2,7 +2,6 @@
 - name: Register the domain in the Nginx Proxy Manager via Bash script
   hosts: localhost
   become: true
-  gather_facts: false
   vars:
     DOMAIN: "{{ DOMAIN }}"
     IP: "{{ IP }}"
