@@ -202,7 +202,7 @@
       debug:
         var: npm_create_ssl_output
     - name: Find the id of the domain npm.{{ domain }}
-      shell: '/root/npm/nginx_proxy_manager_cli.sh --host-search npm.{{ domain }} --machine sed -n "/^\[/,/^\]/p" | jq ".[0].id"'
+      shell: "/root/npm/nginx_proxy_manager_cli.sh --host-search npm.{{ domain }} --machine sed -n sed -n '/^\\[/,/^\\]/p' | jq ''.[0].id'"
       register: npm_get_domain_id_output
 
     - name: Show domain list output
