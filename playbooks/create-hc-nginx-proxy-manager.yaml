@@ -115,7 +115,7 @@
   become: true
   gather_facts: true
   vars:
-    DOMAIN: mediatoken.de
+    DOMAIN: "{{ NPM_DOMAIN }}"
     tasks:
       - include_tasks: hetzner_dns_management.yaml
         vars:
@@ -128,7 +128,7 @@
   become: true
   gather_facts: true
   vars:
-    DOMAIN: npm.mediatoken.de
+    DOMAIN: "{{ NPM_DOMAIN }}"
   tasks:
     - include_tasks: add-domain-ssl-npm.yaml
       vars:
