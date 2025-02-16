@@ -169,6 +169,13 @@
           when: dns_a_wildcard | length == 0
       when: (dns_a_wildcard | length == 0) or (dns_a_wildcard[0].value != hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address)
 
+- name: Run tasks with additional variables
+  hosts: localhost
+  become: true
+  gather_facts: true
+  vars:
+    domain: npm.mediatoken.de
+  tasks:
     - include_tasks: add-domain-ssl-npm.yaml
       vars:
         DOMAIN: "{{ domain }}"
