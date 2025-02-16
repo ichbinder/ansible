@@ -178,6 +178,14 @@
     - name: Delete directory content from /root/npm/token/
       command: find /root/npm/token/ -mindepth 1 -delete
 
+    - name: Generate a token for the domain
+      shell: "/root/npm/nginx_proxy_manager_cli.sh"
+      register: npm_generate_token_output
+
+    - name: Show generate token output
+      debug:
+        var: npm_generate_token_output
+
     - name: Register npm domain in the Nginx Proxy Manager via Bash script
       shell: "/root/npm/nginx_proxy_manager_cli.sh -d npm.{{ domain }} -i {{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }} -p 8080"
       register: npm_registration_output
