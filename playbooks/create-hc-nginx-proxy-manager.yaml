@@ -130,7 +130,7 @@
     - include_tasks: hetzner_dns_management.yaml
       vars:
         DOMAIN: "{{ ROOT_DOMAIN }}"
-        IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
+        SERVER_IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
         HETZNER_API_TOKEN: "{{ HETZNER_API_TOKEN }}"
 
 - name: Run tasks with additional variables
@@ -141,6 +141,6 @@
     - include_tasks: add-domain-ssl-npm.yaml
       vars:
         DOMAIN: "{{ SUB_DOMAIN }}.{{ ROOT_DOMAIN }}"
-        IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
+        SERVER_IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
         NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
         PORT: "81"
