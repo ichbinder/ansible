@@ -8,7 +8,7 @@
   register: npm_generate_token_output
   retries: 3
   delay: 5
-  until: npm_registration_output.rc == 0
+  until: npm_generate_token_output.rc == 0
 
 - name: Show generate token output
   debug:
