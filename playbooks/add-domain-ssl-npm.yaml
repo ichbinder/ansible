@@ -20,6 +20,9 @@
 - name: Register npm domain in the Nginx Proxy Manager via Bash script
   shell: "/root/npm/nginx_proxy_manager_cli.sh -d {{ DOMAIN }} -i {{ SERVER_IP }} -p {{ PORT }}"
   register: npm_registration_output
+  retries: 3
+  delay: 5
+  until: npm_registration_output.rc == 0
 
 - name: Show domain registration output
   debug:
