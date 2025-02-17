@@ -1,3 +1,8 @@
+- name: Remove token directory
+  file:
+    path: /root/npm/token
+    state: absent
+
 - name: Generate a token for the domain
   shell: "/root/npm/nginx_proxy_manager_cli.sh --check-token"
   register: npm_generate_token_output
@@ -9,6 +14,10 @@
 - name: Create SSL certificate for {{ DOMAIN }}
   shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert {{ DOMAIN }} {{ NPM_ADMIN_EMAIL }} -y"
   register: npm_create_ssl_output
+
+- name: Show create ssl certificate output
+  debug:
+    var: npm_create_ssl_output
 
 - name: Wait for 20 seconds
   pause:
