@@ -2,9 +2,6 @@
   file:
     path: /root/npm/token
     state: absent
-  retries: 3
-  delay: 5
-  until: npm_registration_output.rc == 0
 
 - name: Generate a token for the domain
   shell: "/root/npm/nginx_proxy_manager_cli.sh --check-token"
