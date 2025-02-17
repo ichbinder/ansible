@@ -7,9 +7,21 @@
     return_content: yes
   register: zones_response
 
-- name: Set Zone ID fact
-  set_fact:
-    zone_id: "{{ (zones_response.json.zones | selectattr('name', 'equalto', DOMAIN) | list)[0].id }}"
+- name: Check if zone exists and set Zone ID fact
+  block:
+    - name: Get matching zones
+      set_fact:
+        matching_zones: "{{ zones_response.json.zones | selectattr('name', 'equalto', DOMAIN) | list }}"
+
+    - name: Set Zone ID if zone exists
+      set_fact:
+        zone_id: "{{ matching_zones[0].id }}"
+      when: matching_zones | length > 0
+
+    - name: Fail if zone does not exist
+      fail:
+        msg: "Keine Zone für die Domain '{{ DOMAIN }}' gefunden"
+      when: matching_zones | length == 0
 
 - name: Retrieve DNS records for {{ DOMAIN }}
   uri:
