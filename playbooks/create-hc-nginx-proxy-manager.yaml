@@ -110,6 +110,14 @@
       args:
         chdir: /root/npm
 
+    - name: print root domain
+      debug:
+        var: ROOT_DOMAIN
+
+    - name: print sub domain
+      debug:
+        var: SUB_DOMAIN
+
 - name: Add domain to Hetzner DNS API
   hosts: localhost
   become: true
