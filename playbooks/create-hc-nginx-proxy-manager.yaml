@@ -110,6 +110,11 @@
       args:
         chdir: /root/npm
 
+- name: Add domain to Hetzner DNS API
+  hosts: localhost
+  become: true
+  gather_facts: true
+  tasks:
     - name: print root domain
       debug:
         var: ROOT_DOMAIN
@@ -118,11 +123,10 @@
       debug:
         var: SUB_DOMAIN
 
-- name: Add domain to Hetzner DNS API
-  hosts: localhost
-  become: true
-  gather_facts: true
-  tasks:
+    - name: print IP
+      debug:
+        var: hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address
+
     - include_tasks: hetzner_dns_management.yaml
       vars:
         DOMAIN: "{{ ROOT_DOMAIN }}"
