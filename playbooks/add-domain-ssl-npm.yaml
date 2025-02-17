@@ -10,7 +10,7 @@
     var: npm_generate_token_output
 
 - name: Register npm domain in the Nginx Proxy Manager via Bash script
-  shell: "/root/npm/nginx_proxy_manager_cli.sh -d {{ DOMAIN }} -i {{ IP }} -p {{ PORT }}"
+  shell: "/root/npm/nginx_proxy_manager_cli.sh -d {{ DOMAIN }} -i {{ SERVER_IP }} -p {{ PORT }}"
   register: npm_registration_output
 
 - name: Show domain registration output
