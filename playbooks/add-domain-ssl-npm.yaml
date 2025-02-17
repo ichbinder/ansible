@@ -9,14 +9,6 @@
   debug:
     var: npm_generate_token_output
 
-- name: Register npm domain in the Nginx Proxy Manager via Bash script
-  shell: "/root/npm/nginx_proxy_manager_cli.sh -d {{ DOMAIN }} -i {{ SERVER_IP }} -p {{ PORT }}"
-  register: npm_registration_output
-
-- name: Show domain registration output
-  debug:
-    var: npm_registration_output
-
 - name: Create SSL certificate for {{ DOMAIN }}
   shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert {{ DOMAIN }} {{ NPM_ADMIN_EMAIL }} -y"
   register: npm_create_ssl_output
@@ -24,6 +16,14 @@
 - name: Wait for 20 seconds
   pause:
     seconds: 20
+
+- name: Register npm domain in the Nginx Proxy Manager via Bash script
+  shell: "/root/npm/nginx_proxy_manager_cli.sh -d {{ DOMAIN }} -i {{ SERVER_IP }} -p {{ PORT }}"
+  register: npm_registration_output
+
+- name: Show domain registration output
+  debug:
+    var: npm_registration_output
 
 - name: Show create ssl certificate output
   debug:
