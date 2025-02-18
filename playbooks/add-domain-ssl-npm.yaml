@@ -45,7 +45,7 @@
 - name: Validate generated JSON payload
   assert:
     that:
-      - proxy_host_payload | from_json is defined
+      - proxy_host_payload
     fail_msg: "ERROR: Invalid JSON generated: {{ proxy_host_payload }}"
 
 - name: Create proxy host in Nginx Proxy Manager
