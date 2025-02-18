@@ -3,9 +3,6 @@
     path: /root/npm/token
     state: absent
   register: remove_token_output
-  retries: 3
-  delay: 5
-  until: remove_token_output.rc == 0
 
 - name: Show remove token output
   debug:
