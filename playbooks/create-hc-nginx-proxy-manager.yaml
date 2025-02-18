@@ -8,6 +8,7 @@
         state: present
         name: NginxProxyManager
         server_type: cax11
+        location: hel1
         image: ubuntu-24.04
         ssh_keys:
           - HetznerMediaProjekt
