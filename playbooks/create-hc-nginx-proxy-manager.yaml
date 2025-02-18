@@ -116,18 +116,6 @@
   become: true
   gather_facts: true
   tasks:
-    - name: print root domain
-      debug:
-        var: ROOT_DOMAIN
-
-    - name: print sub domain
-      debug:
-        var: SUB_DOMAIN
-
-    - name: print IP
-      debug:
-        var: hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address
-
     - include_tasks: hetzner_dns_management.yaml
       vars:
         DOMAIN: "{{ ROOT_DOMAIN }}"
@@ -144,4 +132,6 @@
         DOMAIN: "{{ SUB_DOMAIN }}.{{ ROOT_DOMAIN }}"
         SERVER_IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
         NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
+        NPM_ADMIN_PASSWORD: "{{ NPM_ADMIN_PASSWORD }}"
         PORT: "81"
+        BASE_URL: "http://{{ SERVER_IP }}:81"

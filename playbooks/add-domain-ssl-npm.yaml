@@ -1,62 +1,115 @@
-- name: Remove token directory
-  file:
-    path: /root/npm/token
-    state: absent
-  register: remove_token_output
+- name: Retrieve initial token from API
+  uri:
+    url: "{{ BASE_URL }}/tokens"
+    method: POST
+    headers:
+      Content-Type: "application/json; charset=UTF-8"
+    body:
+      identity: "{{ NPM_ADMIN_EMAIL }}"
+      secret: "{{ NPM_ADMIN_PASSWORD }}"
+    body_format: json
+    return_content: yes
+  register: initial_response
 
-- name: Show remove token output
+- name: Set initial_token fact
+  set_fact:
+    initial_token: "{{ initial_response.json.token }}"
+
+- name: Fail if initial token retrieval failed
+  fail:
+    msg: "Error getting initial token - Check credentials"
+  when: initial_token == "null"
+
+- name: Generate JSON payload for creating proxy host
+  set_fact:
+    proxy_host_payload: >-
+      {{
+        {
+          "domain_names": [ "{{ DOMAIN }}" ],
+          "forward_host": "{{ SERVER_IP }}",
+          "forward_port": "{{ PORT }}",
+          "access_list_id": null,
+          "certificate_id": null,
+          "ssl_forced": false,
+          "caching_enabled": false,
+          "block_exploits": true,
+          "advanced_config": default({}),
+          "meta": { "dns_challenge": null },
+          "allow_websocket_upgrade": true,
+          "http2_support": true,
+          "forward_scheme": "http",
+          "enabled": true,
+          "locations": from_json
+        } | to_json
+      }}
+
+- name: Validate generated JSON payload
+  assert:
+    that:
+      - proxy_host_payload | from_json is defined
+    fail_msg: "ERROR: Invalid JSON generated: {{ proxy_host_payload }}"
+
+- name: Create proxy host in Nginx Proxy Manager
+  uri:
+    url: "{{ BASE_URL }}/nginx/proxy-hosts"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ initial_token }}"
+      Content-Type: "application/json; charset=UTF-8"
+    body: "{{ proxy_host_payload }}"
+    body_format: json
+    return_content: yes
+  register: create_proxy_response
+
+- name: Verify API response and handle errors
+  fail:
+    msg: "Failed to create proxy host. Error: {{ (create_proxy_response.content | from_json).error.message }}"
+  when: (create_proxy_response.content | from_json).error.message != ""
+
+- name: Display success message for proxy host creation
   debug:
-    var: remove_token_output
+    msg: "SUCCESS: Proxy host {{ DOMAIN_NAMES }} was created successfully!"
 
-- name: Generate a token for the domain
-  shell: "/root/npm/nginx_proxy_manager_cli.sh --check-token"
-  register: npm_generate_token_output
-  retries: 3
-  delay: 5
-  until: npm_generate_token_output.rc == 0
-
-- name: Show generate token output
+- name: Show JSON payload sent to API
   debug:
-    var: npm_generate_token_output
+    msg: "{{ proxy_host_payload | from_json }}"
+#   shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert {{ DOMAIN }} {{ NPM_ADMIN_EMAIL }} -y"
+#   register: npm_create_ssl_output
 
-- name: Create SSL certificate for {{ DOMAIN }}
-  shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert {{ DOMAIN }} {{ NPM_ADMIN_EMAIL }} -y"
-  register: npm_create_ssl_output
+# - name: Show create ssl certificate output
+#   debug:
+#     var: npm_create_ssl_output
 
-- name: Show create ssl certificate output
-  debug:
-    var: npm_create_ssl_output
+# - name: Wait for 20 seconds
+#   pause:
+#     seconds: 20
 
-- name: Wait for 20 seconds
-  pause:
-    seconds: 20
+# - name: Register npm domain in the Nginx Proxy Manager via Bash script
+#   shell: "/root/npm/nginx_proxy_manager_cli.sh -d {{ DOMAIN }} -i {{ SERVER_IP }} -p {{ PORT }}"
+#   register: npm_registration_output
+#   retries: 3
+#   delay: 5
+#   until: npm_registration_output.rc == 0
 
-- name: Register npm domain in the Nginx Proxy Manager via Bash script
-  shell: "/root/npm/nginx_proxy_manager_cli.sh -d {{ DOMAIN }} -i {{ SERVER_IP }} -p {{ PORT }}"
-  register: npm_registration_output
-  retries: 3
-  delay: 5
-  until: npm_registration_output.rc == 0
+# - name: Show domain registration output
+#   debug:
+#     var: npm_registration_output
 
-- name: Show domain registration output
-  debug:
-    var: npm_registration_output
+# - name: Show create ssl certificate output
+#   debug:
+#     var: npm_create_ssl_output
+# - name: Find the id of the domain {{ DOMAIN }}
+#   shell: "/root/npm/nginx_proxy_manager_cli.sh --host-search {{ DOMAIN }} --machine | sed -n '/^\\[/,/^\\]/p' | jq '.[0].id'"
+#   register: npm_get_domain_id_output
 
-- name: Show create ssl certificate output
-  debug:
-    var: npm_create_ssl_output
-- name: Find the id of the domain {{ DOMAIN }}
-  shell: "/root/npm/nginx_proxy_manager_cli.sh --host-search {{ DOMAIN }} --machine | sed -n '/^\\[/,/^\\]/p' | jq '.[0].id'"
-  register: npm_get_domain_id_output
+# - name: Show domain list output
+#   debug:
+#     var: npm_get_domain_id_output
 
-- name: Show domain list output
-  debug:
-    var: npm_get_domain_id_output
+# - name: Connect domain to ssl certificate
+#   shell: "/root/npm/nginx_proxy_manager_cli.sh --host-ssl-enable {{ npm_get_domain_id_output.stdout }}"
+#   register: npm_connect_domain_to_ssl_output
 
-- name: Connect domain to ssl certificate
-  shell: "/root/npm/nginx_proxy_manager_cli.sh --host-ssl-enable {{ npm_get_domain_id_output.stdout }}"
-  register: npm_connect_domain_to_ssl_output
-
-- name: Show connect domain to ssl certificate output
-  debug:
-    var: npm_connect_domain_to_ssl_output
+# - name: Show connect domain to ssl certificate output
+#   debug:
+#     var: npm_connect_domain_to_ssl_output
