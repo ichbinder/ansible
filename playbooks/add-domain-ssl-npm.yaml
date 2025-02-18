@@ -39,8 +39,7 @@
           "http2_support": true,
           "forward_scheme": "http",
           "enabled": true,
-          "locations": from_json
-        } | to_json
+        }
       }}
 
 - name: Validate generated JSON payload
@@ -63,8 +62,8 @@
 
 - name: Verify API response and handle errors
   fail:
-    msg: "Failed to create proxy host. Error: {{ (create_proxy_response.content | from_json).error.message }}"
-  when: (create_proxy_response.content | from_json).error.message != ""
+    msg: "Failed to create proxy host. Error: {{ create_proxy_response.content.error.message }}"
+  when: create_proxy_response.content.error.message != ""
 
 - name: Display success message for proxy host creation
   debug:
