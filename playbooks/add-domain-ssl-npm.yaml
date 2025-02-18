@@ -33,7 +33,7 @@
           "ssl_forced": false,
           "caching_enabled": false,
           "block_exploits": true,
-          "advanced_config": default({}),
+          "advanced_config": {},
           "meta": { "dns_challenge": null },
           "allow_websocket_upgrade": true,
           "http2_support": true,
