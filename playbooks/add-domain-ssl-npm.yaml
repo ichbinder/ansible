@@ -72,7 +72,7 @@
 
 - name: Display success message for proxy host creation
   debug:
-    msg: "SUCCESS: Proxy host {{ DOMAIN_NAMES }} was created successfully!"
+    msg: "SUCCESS: Proxy host {{ DOMAIN }} was created successfully!"
 
 - name: Show JSON payload sent to API
   debug:
