@@ -66,9 +66,9 @@
   register: create_proxy_response
 
 - name: Verify API response and handle errors
-  fail:
-    msg: "Failed to create proxy host. Error: {{ create_proxy_response.content.error.message }}"
-  when: create_proxy_response.content.error.message != ""
+  ansible.builtin.fail:
+    msg: "API Error: {{ create_proxy_response.content | from_json }}"
+  when: create_proxy_response.status not in [200, 201]
 
 - name: Display success message for proxy host creation
   debug:
