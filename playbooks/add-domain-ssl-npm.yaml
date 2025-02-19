@@ -1,3 +1,11 @@
+- name: Set default PORT if not provided externally
+  set_fact:
+    PORT: "{{ PORT | default('81') }}"
+
+- name: Define BASE_URL variable using set_fact
+  set_fact:
+    BASE_URL: "http://{{ SERVER_IP }}:{{ PORT }}/api"
+
 - name: Retrieve initial token from API
   uri:
     url: "{{ BASE_URL }}/tokens"
@@ -52,6 +60,7 @@
       Authorization: "Bearer {{ initial_token }}"
       Content-Type: "application/json; charset=UTF-8"
     body: "{{ proxy_host_payload }}"
+    status_code: [200, 201]
     body_format: json
     return_content: yes
   register: create_proxy_response
