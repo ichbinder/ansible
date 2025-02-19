@@ -74,9 +74,43 @@
   debug:
     msg: "SUCCESS: Proxy host {{ DOMAIN }} was created successfully!"
 
-- name: Show JSON payload sent to API
+- name: Generate JSON payload for certificate generation
+  set_fact:
+    certificate_payload: >
+      {{
+        {
+          "provider": "letsencrypt",
+          "domain_names": [ DOMAIN ],
+          "meta": {
+            "letsencrypt_agree": true,
+            "letsencrypt_email": NPM_ADMIN_EMAIL
+          }
+        }
+      }}
+
+- name: Generate certificate via Nginx Proxy Manager API
+  uri:
+    url: "{{ BASE_URL }}/users"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ initial_response.json.token }}"
+      Content-Type: "application/json; charset=UTF-8"
+    body: "{{ certificate_payload | to_json }}"
+    status_code: [201]
+    body_format: json
+    return_content: yes
+  register: cert_response
+  ignore_errors: true
+
+- name: Fail if certificate generation failed
+  ansible.builtin.fail:
+    msg: "⛔ Failed to generate certificate. HTTP status: {{ cert_response.status }}. Response: {{ cert_response.content }}. Data sent: {{ certificate_payload | to_json }}"
+  when: cert_response.status != 201
+
+- name: Display success message for certificate generation
   debug:
-    msg: "{{ proxy_host_payload | from_json }}"
+    msg: "✅ Certificate generated successfully!"
+  when: cert_response.status == 201
 #   shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert {{ DOMAIN }} {{ NPM_ADMIN_EMAIL }} -y"
 #   register: npm_create_ssl_output
 
