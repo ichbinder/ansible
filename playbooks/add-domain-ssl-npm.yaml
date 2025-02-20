@@ -114,8 +114,8 @@
 
 - name: Extract certificate ID from cert_response
   set_fact:
-    certificate_id: "{{ cert_response.json[0].id }}"
-  when: cert_response.json is defined and (cert_response.json | length) > 0
+    certificate_id: "{{ cert_response.json.id }}"
+  when: cert_response.json is defined and cert_response.json.id is defined
 
 - name: Display the extracted certificate ID
   debug:
