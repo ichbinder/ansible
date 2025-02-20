@@ -172,15 +172,15 @@
     - name: SSL enablement succeeded
       debug:
         msg: "✅ SSL, HTTP/2, and HSTS enabled successfully! (HTTP status: {{ http_status }})"
-      when: http_status == 200 or http_status == 201
-
-    - name: Log data sent for SSL enablement
-      debug:
-        msg: "👉 Data sent: {{ ssl_update_payload | to_json }}"
-      when: http_status not in [200, 201]
-
-    - name: Fail if SSL enablement failed
-      ansible.builtin.fail:
-        msg: "⛔ Failed to enable SSL, HTTP/2, and HSTS. HTTP status: {{ http_status }}. Response: {{ http_body }}"
-      when: http_status not in [200, 201]
+      when: http_status in [200, 201]
   when: ssl_update_response is defined
+
+- name: Log data sent for SSL enablement if failed
+  debug:
+    msg: "👉 Data sent: {{ ssl_update_payload | to_json }}"
+  when: ssl_update_response is defined and http_status not in [200, 201]
+
+- name: Fail if SSL enablement failed
+  ansible.builtin.fail:
+    msg: "⛔ Failed to enable SSL, HTTP/2, and HSTS. HTTP status: {{ http_status }}. Response: {{ http_body }}"
+  when: ssl_update_response is defined and http_status not in [200, 201]
