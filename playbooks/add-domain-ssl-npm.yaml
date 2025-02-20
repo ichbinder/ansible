@@ -184,10 +184,3 @@
         msg: "⛔ Failed to enable SSL, HTTP/2, and HSTS. HTTP status: {{ http_status }}. Response: {{ http_body }}"
       when: http_status not in [200, 201]
   when: ssl_update_response is defined
-# - name: Connect domain to ssl certificate
-#   shell: "/root/npm/nginx_proxy_manager_cli.sh --host-ssl-enable {{ npm_get_domain_id_output.stdout }}"
-#   register: npm_connect_domain_to_ssl_output
-
-# - name: Show connect domain to ssl certificate output
-#   debug:
-#     var: npm_connect_domain_to_ssl_output
