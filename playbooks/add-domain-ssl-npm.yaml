@@ -173,9 +173,9 @@
       debug:
         msg: "✅ SSL, HTTP/2, and HSTS enabled successfully! (HTTP status: {{ http_status }})"
       when: http_status in [200, 201]
-  when: http_status == 200 or http_status == 201
+  when: http_status in [200, 201]
 
 - name: Fail if SSL enablement failed
   ansible.builtin.fail:
     msg: "⛔ Failed to enable SSL, HTTP/2, and HSTS. HTTP status: {{ http_status }}. Response: {{ http_body }}"
-  when: http_status != 200 or http_status != 201
+  when: http_status not in [200, 201]
