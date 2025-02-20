@@ -169,7 +169,7 @@
 
 - name: Log http status
   debug:
-    msg: "HTTP status: {{ http_status }}"
+    msg: "HTTP status: {{ ssl_update_response }}"
 
 - name: Check SSL enablement response and provide feedback
   block:
