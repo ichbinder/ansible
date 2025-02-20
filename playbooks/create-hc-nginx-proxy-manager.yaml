@@ -121,6 +121,7 @@
         DOMAIN: "{{ ROOT_DOMAIN }}"
         SERVER_IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
         HETZNER_API_TOKEN: "{{ HETZNER_API_TOKEN }}"
+
     - name: Wait for Nginx Proxy Manager to be ready
       pause:
         seconds: 30
