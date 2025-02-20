@@ -169,7 +169,7 @@
 
 - name: Log http status
   debug:
-    msg: (http_status | int) not in [200, 201]
+    msg: "{{ (http_status | int) not in [200, 201] }}"
 
 - name: Check SSL enablement response and provide feedback
   block:
