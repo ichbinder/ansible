@@ -74,6 +74,13 @@
   debug:
     msg: "SUCCESS: Proxy host {{ DOMAIN }} was created successfully!"
 
+- name: Extract proxy host ID from create_proxy_response
+  set_fact:
+    proxy_host_id: "{{ create_proxy_response.json.id }}"
+  when: create_proxy_response.json is defined and create_proxy_response.json.id is defined
+
+- name: Display the extracted proxy host ID
+
 - name: Generate JSON payload for certificate generation
   set_fact:
     certificate_payload: >
@@ -103,6 +110,15 @@
   register: cert_response
   ignore_errors: true
 
+- name: Extract certificate ID from cert_response
+  set_fact:
+    certificate_id: "{{ cert_response.json[0].id }}"
+  when: cert_response.json is defined and (cert_response.json | length) > 0
+
+- name: Display the extracted certificate ID
+  debug:
+    msg: "Extracted Certificate ID: {{ certificate_id }}"
+
 - name: Fail if certificate generation failed
   ansible.builtin.fail:
     msg: "⛔ Failed to generate certificate. HTTP status: {{ cert_response.status }}. Response: {{ cert_response.content }}. Data sent: {{ certificate_payload | to_json }}"
@@ -112,39 +128,60 @@
   debug:
     msg: "✅ Certificate generated successfully!"
   when: cert_response.status == 201
-#   shell: "/root/npm/nginx_proxy_manager_cli.sh --generate-cert {{ DOMAIN }} {{ NPM_ADMIN_EMAIL }} -y"
-#   register: npm_create_ssl_output
 
-# - name: Show create ssl certificate output
-#   debug:
-#     var: npm_create_ssl_output
+- name: Generate JSON payload for SSL enablement
+  set_fact:
+    ssl_update_payload: >
+      {{
+        {
+          "certificate_id": certificate_id,
+          "ssl_forced": true,
+          "http2_support": true,
+          "hsts_enabled": true,
+          "hsts_subdomains": false
+        }
+      }}
 
-# - name: Wait for 20 seconds
-#   pause:
-#     seconds: 20
+- name: Log the payload for SSL enablement
+  debug:
+    msg: "Data being sent for SSL enablement: {{ ssl_update_payload | to_json }}"
 
-# - name: Register npm domain in the Nginx Proxy Manager via Bash script
-#   shell: "/root/npm/nginx_proxy_manager_cli.sh -d {{ DOMAIN }} -i {{ SERVER_IP }} -p {{ PORT }}"
-#   register: npm_registration_output
-#   retries: 3
-#   delay: 5
-#   until: npm_registration_output.rc == 0
+- name: Update proxy host for SSL enablement via Nginx Proxy Manager API
+  uri:
+    url: "{{ BASE_URL }}/nginx/proxy-hosts/{{ proxy_host_id }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ initial_token }}"
+      Content-Type: "application/json; charset=UTF-8"
+    body: "{{ ssl_update_payload | to_json }}"
+    body_format: json
+    return_content: yes
+    status_code: [200]
+  register: ssl_update_response
+  ignore_errors: yes
 
-# - name: Show domain registration output
-#   debug:
-#     var: npm_registration_output
+- name: Set HTTP response details for SSL update
+  set_fact:
+    http_status: "{{ ssl_update_response.status }}"
+    http_body: "{{ ssl_update_response.content }}"
 
-# - name: Show create ssl certificate output
-#   debug:
-#     var: npm_create_ssl_output
-# - name: Find the id of the domain {{ DOMAIN }}
-#   shell: "/root/npm/nginx_proxy_manager_cli.sh --host-search {{ DOMAIN }} --machine | sed -n '/^\\[/,/^\\]/p' | jq '.[0].id'"
-#   register: npm_get_domain_id_output
+- name: Check SSL enablement response and provide feedback
+  block:
+    - name: SSL enablement succeeded
+      debug:
+        msg: "✅ SSL, HTTP/2, and HSTS enabled successfully! (HTTP status: {{ http_status }})"
+      when: http_status == 200
 
-# - name: Show domain list output
-#   debug:
-#     var: npm_get_domain_id_output
+    - name: Log data sent for SSL enablement
+      debug:
+        msg: "👉 Data sent: {{ ssl_update_payload | to_json }}"
+      when: http_status != 200
 
+    - name: Fail if SSL enablement failed
+      ansible.builtin.fail:
+        msg: "⛔ Failed to enable SSL, HTTP/2, and HSTS. HTTP status: {{ http_status }}. Response: {{ http_body }}"
+      when: http_status != 200
+  when: ssl_update_response is defined
 # - name: Connect domain to ssl certificate
 #   shell: "/root/npm/nginx_proxy_manager_cli.sh --host-ssl-enable {{ npm_get_domain_id_output.stdout }}"
 #   register: npm_connect_domain_to_ssl_output
