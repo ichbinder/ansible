@@ -80,6 +80,8 @@
   when: create_proxy_response.json is defined and create_proxy_response.json.id is defined
 
 - name: Display the extracted proxy host ID
+  debug:
+    msg: "Extracted Proxy Host ID: {{ proxy_host_id }}"
 
 - name: Generate JSON payload for certificate generation
   set_fact:
