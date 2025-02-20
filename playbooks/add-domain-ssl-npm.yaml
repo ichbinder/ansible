@@ -164,12 +164,12 @@
 
 - name: Set HTTP response details for SSL update
   set_fact:
-    http_status: "{{ ssl_update_response.status }}"
+    http_status: "{{ ssl_update_response | from_json | json_query('status') }}"
     http_body: "{{ ssl_update_response.content }}"
 
 - name: Log http status
   debug:
-    msg: "HTTP status: {{ ssl_update_response }}"
+    msg: "HTTP status: {{ http_status }}"
 
 - name: Check SSL enablement response and provide feedback
   block:
