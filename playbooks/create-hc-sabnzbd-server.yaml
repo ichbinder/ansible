@@ -146,10 +146,14 @@
       args:
         chdir: /root
 
-    - name: Registriere SABnzbd Domain im Nginx Proxy Manager via Bash Script
-      shell: "/root/npm/nginx_proxy_manager_cli.sh -d sahbzbd.{{ domain_suffix }} -i {{ hcloud_server_result.hcloud_server.ipv4_address }} -p 8080"
-      register: npm_registration_output
-
-    - name: Zeige Ausgabe der Domainregistrierung an
-      debug:
-        var: npm_registration_output
+- name: Add SSL to Nginx Proxy Manager
+  hosts: localhost
+  become: true
+  gather_facts: true
+  tasks:
+    - include_tasks: add-domain-ssl-npm.yaml
+      vars:
+        DOMAIN: "sabnzbd.{{ domain_suffix }}"
+        SERVER_IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
+        NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
+        NPM_ADMIN_PASSWORD: "{{ NPM_ADMIN_PASSWORD }}"

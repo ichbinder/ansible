@@ -126,7 +126,7 @@
       pause:
         seconds: 30
 
-- name: Run tasks with additional variables
+- name: Add SSL to Nginx Proxy Manager
   hosts: localhost
   become: true
   gather_facts: true
