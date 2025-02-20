@@ -124,12 +124,12 @@
 - name: Fail if certificate generation failed
   ansible.builtin.fail:
     msg: "⛔ Failed to generate certificate. HTTP status: {{ cert_response.status }}. Response: {{ cert_response.content }}. Data sent: {{ certificate_payload | to_json }}"
-  when: cert_response.status != 201
+  when: cert_response.status != 201 and cert_response.status != 200
 
 - name: Display success message for certificate generation
   debug:
     msg: "✅ Certificate generated successfully!"
-  when: cert_response.status == 201
+  when: cert_response.status == 201 or cert_response.status == 200
 
 - name: Generate JSON payload for SSL enablement
   set_fact:
