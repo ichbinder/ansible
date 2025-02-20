@@ -167,6 +167,10 @@
     http_status: "{{ ssl_update_response.status }}"
     http_body: "{{ ssl_update_response.content }}"
 
+- name: Log http status
+  debug:
+    msg: "HTTP status: {{ http_status }}"
+
 - name: Check SSL enablement response and provide feedback
   block:
     - name: SSL enablement succeeded
