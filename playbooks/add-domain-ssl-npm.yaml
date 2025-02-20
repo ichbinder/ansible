@@ -80,17 +80,18 @@
       {{
         {
           "provider": "letsencrypt",
-          "domain_names": [ DOMAIN ],
+          "domain_names": [ "{{ DOMAIN }}" ],
           "meta": {
+            "dns_challenge": false,
             "letsencrypt_agree": true,
-            "letsencrypt_email": NPM_ADMIN_EMAIL
+            "letsencrypt_email": "{{ NPM_ADMIN_EMAIL }}"
           }
         }
       }}
 
 - name: Generate certificate via Nginx Proxy Manager API
   uri:
-    url: "{{ BASE_URL }}/users"
+    url: "{{ BASE_URL }}/nginx/certificates"
     method: POST
     headers:
       Authorization: "Bearer {{ initial_token }}"
