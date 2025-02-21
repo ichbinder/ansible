@@ -135,5 +135,6 @@
       vars:
         DOMAIN: "{{ SUB_DOMAIN }}.{{ ROOT_DOMAIN }}"
         SERVER_IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
+        NPM_IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
         NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
         NPM_ADMIN_PASSWORD: "{{ NPM_ADMIN_PASSWORD }}"

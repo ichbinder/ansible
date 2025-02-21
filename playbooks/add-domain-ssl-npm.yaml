@@ -4,7 +4,7 @@
 
 - name: Define BASE_URL variable using set_fact
   set_fact:
-    BASE_URL: "http://{{ SERVER_IP }}:{{ PORT }}/api"
+    BASE_URL: "http://{{ NPM_IP }}:{{ PORT }}/api"
 
 - name: Retrieve initial token from API
   uri:
