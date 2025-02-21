@@ -150,6 +150,8 @@
   hosts: localhost
   become: true
   gather_facts: true
+  vars:
+    domain_suffix: mediatoken.de
   tasks:
     - include_tasks: add-domain-ssl-npm.yaml
       vars:
