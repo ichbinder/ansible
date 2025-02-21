@@ -1,10 +1,10 @@
 - name: Set default PORT if not provided externally
   set_fact:
-    PORT: "{{ PORT | default('81') }}"
+    PORT: "{{ PORT | default('80') }}"
 
 - name: Define BASE_URL variable using set_fact
   set_fact:
-    BASE_URL: "http://{{ NPM_IP }}:{{ PORT }}/api"
+    BASE_URL: "{% if NPM_PORT | default('') == '' %}https://{{ NPM_IP }}/api{% else %}http://{{ NPM_IP }}:{{ NPM_PORT }}/api{% endif %}"
 
 - name: Retrieve initial token from API
   uri:

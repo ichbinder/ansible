@@ -157,7 +157,7 @@
       vars:
         DOMAIN: "{{ SERVER_NAME }}.{{ domain_suffix }}"
         SERVER_IP: "{{ hostvars['localhost'].hcloud_server_result.hcloud_server.ipv4_address }}"
+        PORT: "8080"
         NPM_IP: "npm.{{ domain_suffix }}"
         NPM_ADMIN_EMAIL: "{{ NPM_ADMIN_EMAIL }}"
         NPM_ADMIN_PASSWORD: "{{ NPM_ADMIN_PASSWORD }}"
-        PORT: "8080"
