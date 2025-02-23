@@ -131,21 +131,77 @@
       copy:
         dest: /etc/default/sabnzbdplus
         content: |
+          # Defaults for SABnzbd initscript
+          # This is a POSIX shell fragment
+
+          # Enable SABnzbd
+          ENABLED=1
+
+          # Username to run SABnzbd as
           USER=root
+
+          # Interface to listen on
           HOST=0.0.0.0
+
+          # Port to listen on
           PORT=8080
-          EXTRAOPTS="--config-file /root/.sabnzbd/sabnzbd.ini"
+
+          # Extra options to pass to SABnzbd
+          EXTRAOPTS="--config-file /root/.sabnzbd/sabnzbd.ini --server"
         mode: "0644"
 
-    - name: Reload systemd
+    - name: Create systemd service override directory
+      file:
+        path: /etc/systemd/system/sabnzbdplus.service.d
+        state: directory
+        mode: "0755"
+
+    - name: Configure systemd service override
+      copy:
+        dest: /etc/systemd/system/sabnzbdplus.service.d/override.conf
+        content: |
+          [Service]
+          User=root
+          Group=root
+          WorkingDirectory=/root
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: "0644"
+
+    - name: Reload systemd daemon
       systemd:
         daemon_reload: yes
 
-    - name: Enable and start SABnzbd service
+    - name: Stop SABnzbd service if running
+      systemd:
+        name: sabnzbdplus
+        state: stopped
+      ignore_errors: yes
+
+    - name: Enable SABnzbd service
       systemd:
         name: sabnzbdplus
         enabled: yes
+
+    - name: Start SABnzbd service
+      systemd:
+        name: sabnzbdplus
         state: started
+
+    - name: Check SABnzbd service status
+      systemd:
+        name: sabnzbdplus
+      register: service_status
+
+    - name: Display service status
+      debug:
+        var: service_status
+
+    - name: Ensure service is running
+      fail:
+        msg: "SABnzbd service is not running"
+      when: service_status.status.ActiveState != "active"
 
 - name: Install aws cli
   hosts: created_servers
