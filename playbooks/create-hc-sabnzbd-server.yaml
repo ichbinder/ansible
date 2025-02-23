@@ -73,6 +73,21 @@
           - python3-boto3
         state: present
 
+    - name: Create sabnzbd group
+      group:
+        name: sabnzbd
+        state: present
+
+    - name: Create sabnzbd user
+      user:
+        name: sabnzbd
+        group: sabnzbd
+        system: yes
+        shell: /bin/false
+        home: /etc/sabnzbd
+        create_home: no
+        state: present
+
     - name: Create config directory
       file:
         path: /etc/sabnzbd
