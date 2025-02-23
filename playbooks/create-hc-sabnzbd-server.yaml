@@ -127,78 +127,51 @@
         owner: root
         group: root
 
-    - name: Configure SABnzbd service
-      copy:
-        dest: /etc/default/sabnzbdplus
-        content: |
-          # Defaults for SABnzbd initscript
-          # This is a POSIX shell fragment
+    - name: Stop and disable default SABnzbd service
+      systemd:
+        name: sabnzbdplus
+        state: stopped
+        enabled: false
+      ignore_errors: true
 
-          # Enable SABnzbd
-          ENABLED=1
-
-          # Username to run SABnzbd as
-          USER=root
-
-          # Interface to listen on
-          HOST=0.0.0.0
-
-          # Port to listen on
-          PORT=8080
-
-          # Extra options to pass to SABnzbd
-          EXTRAOPTS="-f /root/.sabnzbd/sabnzbd.ini -s $HOST:$PORT -d"
-        mode: "0644"
-
-    - name: Create systemd service override directory
+    - name: Remove default service configuration
       file:
-        path: /etc/systemd/system/sabnzbdplus.service.d
-        state: directory
-        mode: "0755"
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/default/sabnzbdplus
+        - /etc/systemd/system/sabnzbdplus.service.d
+      ignore_errors: true
 
-    - name: Configure systemd service override
+    - name: Create custom systemd service file
       copy:
-        dest: /etc/systemd/system/sabnzbdplus.service.d/override.conf
+        dest: /etc/systemd/system/sabnzbd.service
         content: |
+          [Unit]
+          Description=SABnzbd Usenet Client
+          After=network.target
+
           [Service]
-          Type=forking
+          Type=simple
           User=root
           Group=root
           WorkingDirectory=/root
-          PIDFile=/run/sabnzbdplus/sabnzbdplus.pid
-          RuntimeDirectory=sabnzbdplus
-          RuntimeDirectoryMode=0755
+          ExecStart=/usr/bin/sabnzbdplus -f /root/.sabnzbd/sabnzbd.ini -s 0.0.0.0:8080
+          Restart=on-failure
+          RestartSec=5
 
           [Install]
           WantedBy=multi-user.target
         mode: "0644"
 
-    - name: Create PID directory
-      file:
-        path: /run/sabnzbdplus
-        state: directory
-        mode: "0755"
-        owner: root
-        group: root
-
     - name: Reload systemd daemon
       systemd:
         daemon_reload: yes
 
-    - name: Stop SABnzbd service if running
+    - name: Enable and start SABnzbd service
       systemd:
-        name: sabnzbdplus
-        state: stopped
-      ignore_errors: true
-
-    - name: Enable SABnzbd service
-      systemd:
-        name: sabnzbdplus
+        name: sabnzbd
         enabled: yes
-
-    - name: Start SABnzbd service
-      systemd:
-        name: sabnzbdplus
         state: started
 
     - name: Wait for service to be fully started
@@ -208,7 +181,7 @@
 
     - name: Check SABnzbd service status
       systemd:
-        name: sabnzbdplus
+        name: sabnzbd
       register: service_status
 
     - name: Display service status
