@@ -147,7 +147,7 @@
           PORT=8080
 
           # Extra options to pass to SABnzbd
-          EXTRAOPTS="--config-file /root/.sabnzbd/sabnzbd.ini --server"
+          EXTRAOPTS="-f /root/.sabnzbd/sabnzbd.ini -s $HOST:$PORT -d"
         mode: "0644"
 
     - name: Create systemd service override directory
@@ -161,13 +161,25 @@
         dest: /etc/systemd/system/sabnzbdplus.service.d/override.conf
         content: |
           [Service]
+          Type=forking
           User=root
           Group=root
           WorkingDirectory=/root
+          PIDFile=/run/sabnzbdplus/sabnzbdplus.pid
+          RuntimeDirectory=sabnzbdplus
+          RuntimeDirectoryMode=0755
 
           [Install]
           WantedBy=multi-user.target
         mode: "0644"
+
+    - name: Create PID directory
+      file:
+        path: /run/sabnzbdplus
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
 
     - name: Reload systemd daemon
       systemd:
@@ -177,7 +189,7 @@
       systemd:
         name: sabnzbdplus
         state: stopped
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Enable SABnzbd service
       systemd:
@@ -188,6 +200,11 @@
       systemd:
         name: sabnzbdplus
         state: started
+
+    - name: Wait for service to be fully started
+      wait_for:
+        port: 8080
+        timeout: 30
 
     - name: Check SABnzbd service status
       systemd:
