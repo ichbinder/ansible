@@ -166,8 +166,8 @@
         content: |
           ACCESS_KEY={{ HETZNER_S3_ACCESS_KEY }}
           SECRET_KEY={{ HETZNER_S3_SECRET_KEY }}
-          REGION="fsn1"
-          S3_ENDPOINT="fsn1.your-objectstorage.com"
+          REGION="hel1"
+          S3_ENDPOINT="hel1.your-objectstorage.com"
           S3_BUCKET="media-storage01"
         mode: "0600"
         owner: "1000"
