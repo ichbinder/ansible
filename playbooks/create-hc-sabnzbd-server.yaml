@@ -52,10 +52,10 @@
         state: present
 
     - name: Add multiverse repository
-      command: add-apt-repository multiverse
+      command: add-apt-repository multiverse -y
 
     - name: Add universe repository
-      command: add-apt-repository universe
+      command: add-apt-repository universe -y
 
     - name: Add SABnzbd PPA (nobetas)
       command: add-apt-repository ppa:jcfp/nobetas
