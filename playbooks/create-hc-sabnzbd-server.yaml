@@ -84,18 +84,7 @@
         state: directory
         mode: "0755"
       loop:
-        - /root/data/config
-        - /root/data/Usenet_Downloads
-        - /root/data/incomplete-downloads
-
-    - name: Setze Berechtigungen für /root/data so dass PUID=1000 und PGID=1000 lesen, schreiben und ausführen können
-      file:
-        path: /root/data
-        owner: "1000"
-        group: "1000"
-        mode: "0775"
-        recurse: yes
-      become: true
+        - /config
 
     - name: Installiere python3-pip
       apt:
@@ -113,7 +102,7 @@
       amazon.aws.aws_s3:
         bucket: "media-storage01" # Ersetze mit deinem Bucket-Namen
         object: "MediaBackend/sabnzbd.ini" # Pfad zur Datei im Bucket (anpassen falls nötig)
-        dest: /root/data/config/sabnzbd.ini
+        dest: /config/sabnzbd.ini
         mode: get
         endpoint_url: "https://hel1.your-objectstorage.com" # Passe die Endpoint URL bei Bedarf an
         aws_access_key: "{{ HETZNER_S3_ACCESS_KEY }}"
@@ -132,11 +121,9 @@
               environment:
                 - PUID=1000
                 - PGID=1000
-                - TZ=Etc/UTC
+                - TZ=Europe/Berlin
               volumes:
-                - /root/data/config:/config
-                - /root/data/Usenet_Downloads:/config/Downloads/complete  # optional
-                - /root/data/incomplete-downloads:/config/Downloads/incomplete  # optional
+                - /config:/config
               ports:
                 - "8080:8080"
               restart: unless-stopped
@@ -146,56 +133,42 @@
       args:
         chdir: /root
 
-    - name: AWS CLI herunterladen (ARM64)
-      get_url:
-        url: "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
-        dest: "/tmp/awscliv2.zip"
-        mode: "0755"
-
-    - name: Installiere unzip
-      apt:
-        name: unzip
-        state: present
-
-    - name: AWS CLI Zip-Datei entpacken
-      unarchive:
-        src: "/tmp/awscliv2.zip"
-        dest: "/tmp"
-        remote_src: yes
-
-    - name: AWS CLI installieren
-      shell: "/tmp/aws/install"
-
-    - name: Temporäre Dateien aufräumen
+    - name: Ensure scripts directory exists
       file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - "/tmp/awscliv2.zip"
-        - "/tmp/aws"
-
-    - name: Erstelle .aws Verzeichnis
-      file:
-        path: /root/.aws
+        path: /config/scripts
         state: directory
-        mode: "0700"
+        mode: "0755"
+        owner: "1000"
+        group: "1000"
 
-    - name: Erstelle AWS credentials Datei
-      copy:
-        dest: /root/.aws/credentials
-        content: |
-          [default]
-          aws_access_key_id = {{ HETZNER_S3_ACCESS_KEY }}
-          aws_secret_access_key = {{ HETZNER_S3_SECRET_KEY }}
-        mode: "0600"
+    - name: Download upload_s3_nzb.sh script from GitHub
+      get_url:
+        url: https://raw.githubusercontent.com/ichbinder/ScriptBox/refs/heads/main/Bash/upload_s3_nzb.sh
+        dest: /config/scripts/upload_s3_nzb.sh
+        mode: "0755"
+        owner: "1000"
+        group: "1000"
 
-    - name: Erstelle AWS config Datei
+      file:
+        path: /config
+        owner: "1000"
+        group: "1000"
+        mode: "0775"
+        recurse: yes
+      become: true
+
+    - name: Create .env file for upload script
       copy:
-        dest: /root/.aws/config
+        dest: /config/scripts/.env
         content: |
-          [default]
-          endpoint_url = https://fsn1.your-objectstorage.com
+          ACCESS_KEY={{ HETZNER_S3_ACCESS_KEY }}
+          SECRET_KEY={{ HETZNER_S3_SECRET_KEY }}
+          REGION="fsn1"
+          S3_ENDPOINT="fsn1.your-objectstorage.com"
+          S3_BUCKET="media-storage01"
         mode: "0600"
+        owner: "1000"
+        group: "1000"
 
 - name: Add SSL to Nginx Proxy Manager
   hosts: localhost

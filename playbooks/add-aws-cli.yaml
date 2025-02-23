@@ -1,0 +1,50 @@
+- name: AWS CLI herunterladen (ARM64)
+  get_url:
+    url: "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+    dest: "/tmp/awscliv2.zip"
+    mode: "0755"
+
+- name: Installiere unzip
+  apt:
+    name: unzip
+    state: present
+
+- name: AWS CLI Zip-Datei entpacken
+  unarchive:
+    src: "/tmp/awscliv2.zip"
+    dest: "/tmp"
+    remote_src: yes
+
+- name: AWS CLI installieren
+  shell: "/tmp/aws/install"
+
+- name: Temporäre Dateien aufräumen
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/awscliv2.zip"
+    - "/tmp/aws"
+
+- name: Erstelle .aws Verzeichnis
+  file:
+    path: /root/.aws
+    state: directory
+    mode: "0700"
+
+- name: Erstelle AWS credentials Datei
+  copy:
+    dest: /root/.aws/credentials
+    content: |
+      [default]
+      aws_access_key_id = {{ HETZNER_S3_ACCESS_KEY }}
+      aws_secret_access_key = {{ HETZNER_S3_SECRET_KEY }}
+    mode: "0600"
+
+- name: Erstelle AWS config Datei
+  copy:
+    dest: /root/.aws/config
+    content: |
+      [default]
+      endpoint_url = https://fsn1.your-objectstorage.com
+    mode: "0600"
