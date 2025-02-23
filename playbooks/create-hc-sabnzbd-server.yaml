@@ -9,14 +9,14 @@
     - name: Create the "{{ SERVER_NAME }}" server
       hetzner.hcloud.hcloud_server:
         state: present
-        name: "{{ SERVER_NAME }}" # Server name
+        name: "{{ SERVER_NAME }}"
         server_type: cax11
         location: hel1
-        image: ubuntu-24.04 # Operating system image
+        image: ubuntu-24.04
         ssh_keys:
-          - HetznerMediaProjekt # Hetzner SSH Key as an array
+          - HetznerMediaProjekt
         private_networks:
-          - Media-Central # Private network as an array
+          - Media-Central
         api_token: "{{ HETZNER_CLOUD }}"
       register: hcloud_server_result
 
@@ -30,14 +30,14 @@
         groups: created_servers
         ansible_user: root
 
-    - name: Warte, bis SSH verfügbar ist
+    - name: Wait for SSH to become available
       wait_for:
         host: "{{ hcloud_server_result.hcloud_server.ipv4_address }}"
         port: 22
         delay: 10
         timeout: 300
 
-- name: Configure server - Install Docker and deploy SABnzbd via Docker Compose
+- name: Configure server - Install SABnzbd directly
   hosts: created_servers
   become: true
   gather_facts: !!bool true
@@ -49,120 +49,79 @@
     - name: Install prerequisite packages
       apt:
         name:
-          - apt-transport-https
-          - ca-certificates
-          - curl
           - software-properties-common
+          - python3-pip
+          - python3-boto3
         state: present
 
-    - name: Docker GPG Schlüssel hinzufügen
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
-
-    - name: Docker Repository hinzufügen
+    - name: Add multiverse repository
       apt_repository:
-        repo: "deb [arch=arm64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} multiverse"
         state: present
 
-    - name: Apt Cache aktualisieren nach Repository Hinzufügen
+    - name: Add universe repository
+      apt_repository:
+        repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} universe"
+        state: present
+
+    - name: Add SABnzbd PPA (nobetas)
+      apt_repository:
+        repo: ppa:jcfp/nobetas
+        state: present
+
+    - name: Update apt cache after adding repositories
       apt:
         update_cache: true
 
-    - name: Docker installieren
+    - name: Install SABnzbd
       apt:
-        name: docker-ce
+        name: sabnzbdplus
         state: present
 
-    - name: Docker Compose Plugin installieren
-      apt:
-        name: docker-compose-plugin
-        state: present
-
-    - name: Verzeichnisse für SABnzbd anlegen
+    - name: Create config directory
       file:
-        path: "{{ item }}"
+        path: /etc/sabnzbd
         state: directory
         mode: "0755"
-      loop:
-        - /config
+        owner: sabnzbd
+        group: sabnzbd
 
-    - name: Installiere python3-pip
-      apt:
-        name: python3-pip
-        state: present
-      become: true
-
-    - name: Installiere boto3 (zum S3 Zugriff)
-      apt:
-        name: python3-boto3
-        state: present
-      become: true
-
-    - name: Sabnzbd.ini vom S3 Bucket herunterladen
+    - name: Download sabnzbd.ini from S3
       amazon.aws.aws_s3:
-        bucket: "media-storage01" # Ersetze mit deinem Bucket-Namen
-        object: "MediaBackend/sabnzbd.ini" # Pfad zur Datei im Bucket (anpassen falls nötig)
-        dest: /config/sabnzbd.ini
+        bucket: "media-storage01"
+        object: "MediaBackend/sabnzbd.ini"
+        dest: /etc/sabnzbd/sabnzbd.ini
         mode: get
-        endpoint_url: "https://hel1.your-objectstorage.com" # Passe die Endpoint URL bei Bedarf an
+        endpoint_url: "https://hel1.your-objectstorage.com"
         aws_access_key: "{{ HETZNER_S3_ACCESS_KEY }}"
         aws_secret_key: "{{ HETZNER_S3_SECRET_KEY }}"
-      become: true
 
-    - name: Docker Compose Datei für SABnzbd kopieren
-      copy:
-        dest: /root/docker-compose.yml
-        content: |
-          version: "3.8"
-          services:
-            sabnzbd:
-              image: lscr.io/linuxserver/sabnzbd:latest
-              container_name: sabnzbd
-              environment:
-                - PUID=1000
-                - PGID=1000
-                - TZ=Europe/Berlin
-              volumes:
-                - /config:/config
-              ports:
-                - "8080:8080"
-              restart: unless-stopped
-
-    - name: SABnzbd Container mit Docker Compose starten
-      shell: docker compose -f /root/docker-compose.yml up -d
-      args:
-        chdir: /root
-
-    - name: Ensure scripts directory exists
+    - name: Set permissions for sabnzbd.ini
       file:
-        path: /config/scripts
+        path: /etc/sabnzbd/sabnzbd.ini
+        owner: sabnzbd
+        group: sabnzbd
+        mode: "0600"
+
+    - name: Create scripts directory
+      file:
+        path: /etc/sabnzbd/scripts
         state: directory
         mode: "0755"
-        owner: "1000"
-        group: "1000"
+        owner: sabnzbd
+        group: sabnzbd
 
-    - name: Download upload_s3_nzb.sh script from GitHub
+    - name: Download upload_s3_nzb.sh script
       get_url:
         url: https://raw.githubusercontent.com/ichbinder/ScriptBox/refs/heads/main/Bash/upload_s3_nzb.sh
-        dest: /config/scripts/upload_s3_nzb.sh
+        dest: /etc/sabnzbd/scripts/upload_s3_nzb.sh
         mode: "0755"
-        owner: "1000"
-        group: "1000"
-      become: true
-
-    - name: Set permissions for /config directory
-      file:
-        path: /config
-        owner: "1000"
-        group: "1000"
-        mode: "0775"
-        recurse: yes
-      become: true
+        owner: sabnzbd
+        group: sabnzbd
 
     - name: Create .env file for upload script
       copy:
-        dest: /config/scripts/.env
+        dest: /etc/sabnzbd/scripts/.env
         content: |
           ACCESS_KEY={{ HETZNER_S3_ACCESS_KEY }}
           SECRET_KEY={{ HETZNER_S3_SECRET_KEY }}
@@ -170,8 +129,41 @@
           S3_ENDPOINT="hel1.your-objectstorage.com"
           S3_BUCKET="media-storage01"
         mode: "0600"
-        owner: "1000"
-        group: "1000"
+        owner: sabnzbd
+        group: sabnzbd
+
+    - name: Configure SABnzbd service
+      copy:
+        dest: /etc/default/sabnzbdplus
+        content: |
+          USER=sabnzbd
+          HOST=0.0.0.0
+          PORT=8080
+          EXTRAOPTS="--config-file /etc/sabnzbd/sabnzbd.ini"
+        mode: "0644"
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start SABnzbd service
+      systemd:
+        name: sabnzbdplus
+        enabled: yes
+        state: started
+
+- name: Install aws cli
+  hosts: created_servers
+  become: true
+  gather_facts: true
+  tasks:
+    - include_tasks: install-aws-cli.yaml
+      vars:
+        AWS_ACCESS_KEY: "{{ HETZNER_S3_ACCESS_KEY }}"
+        AWS_SECRET_KEY: "{{ HETZNER_S3_SECRET_KEY }}"
+        AWS_REGION: "hel1"
+        AWS_ENDPOINT: "hel1.your-objectstorage.com"
+        AWS_BUCKET: "media-storage01"
 
 - name: Add SSL to Nginx Proxy Manager
   hosts: localhost
