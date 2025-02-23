@@ -46,36 +46,31 @@
       apt:
         update_cache: true
 
-    - name: Install prerequisite packages
+    - name: Install software-properties-common
       apt:
-        name:
-          - software-properties-common
-          - python3-pip
-          - python3-boto3
+        name: software-properties-common
         state: present
 
     - name: Add multiverse repository
-      apt_repository:
-        repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} multiverse"
-        state: present
+      command: add-apt-repository multiverse
 
     - name: Add universe repository
-      apt_repository:
-        repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} universe"
-        state: present
+      command: add-apt-repository universe
 
     - name: Add SABnzbd PPA (nobetas)
-      apt_repository:
-        repo: ppa:jcfp/nobetas
-        state: present
+      command: add-apt-repository ppa:jcfp/nobetas
 
-    - name: Update apt cache after adding repositories
+    - name: Update and upgrade packages
       apt:
         update_cache: true
+        upgrade: dist
 
-    - name: Install SABnzbd
+    - name: Install SABnzbd and required packages
       apt:
-        name: sabnzbdplus
+        name:
+          - sabnzbdplus
+          - python3-pip
+          - python3-boto3
         state: present
 
     - name: Create config directory
