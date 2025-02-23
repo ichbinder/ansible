@@ -73,34 +73,27 @@
           - python3-boto3
         state: present
 
-    - name: Create sabnzbd group
-      group:
-        name: sabnzbd
-        state: present
-
-    - name: Create sabnzbd user
-      user:
-        name: sabnzbd
-        group: sabnzbd
-        system: yes
-        shell: /bin/false
-        home: /etc/sabnzbd
-        create_home: no
-        state: present
-
     - name: Create config directory
       file:
-        path: /etc/sabnzbd
+        path: /root/.sabnzbd
         state: directory
         mode: "0755"
-        owner: sabnzbd
-        group: sabnzbd
+        owner: root
+        group: root
+
+    - name: Create scripts directory
+      file:
+        path: /root/scripts
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
 
     - name: Download sabnzbd.ini from S3
       amazon.aws.aws_s3:
         bucket: "media-storage01"
         object: "MediaBackend/sabnzbd.ini"
-        dest: /etc/sabnzbd/sabnzbd.ini
+        dest: /root/.sabnzbd/sabnzbd.ini
         mode: get
         endpoint_url: "https://hel1.your-objectstorage.com"
         aws_access_key: "{{ HETZNER_S3_ACCESS_KEY }}"
@@ -108,30 +101,22 @@
 
     - name: Set permissions for sabnzbd.ini
       file:
-        path: /etc/sabnzbd/sabnzbd.ini
-        owner: sabnzbd
-        group: sabnzbd
+        path: /root/.sabnzbd/sabnzbd.ini
+        owner: root
+        group: root
         mode: "0600"
-
-    - name: Create scripts directory
-      file:
-        path: /etc/sabnzbd/scripts
-        state: directory
-        mode: "0755"
-        owner: sabnzbd
-        group: sabnzbd
 
     - name: Download upload_s3_nzb.sh script
       get_url:
         url: https://raw.githubusercontent.com/ichbinder/ScriptBox/refs/heads/main/Bash/upload_s3_nzb.sh
-        dest: /etc/sabnzbd/scripts/upload_s3_nzb.sh
+        dest: /root/scripts/upload_s3_nzb.sh
         mode: "0755"
-        owner: sabnzbd
-        group: sabnzbd
+        owner: root
+        group: root
 
     - name: Create .env file for upload script
       copy:
-        dest: /etc/sabnzbd/scripts/.env
+        dest: /root/scripts/.env
         content: |
           ACCESS_KEY={{ HETZNER_S3_ACCESS_KEY }}
           SECRET_KEY={{ HETZNER_S3_SECRET_KEY }}
@@ -139,17 +124,17 @@
           S3_ENDPOINT="hel1.your-objectstorage.com"
           S3_BUCKET="media-storage01"
         mode: "0600"
-        owner: sabnzbd
-        group: sabnzbd
+        owner: root
+        group: root
 
     - name: Configure SABnzbd service
       copy:
         dest: /etc/default/sabnzbdplus
         content: |
-          USER=sabnzbd
+          USER=root
           HOST=0.0.0.0
           PORT=8080
-          EXTRAOPTS="--config-file /etc/sabnzbd/sabnzbd.ini"
+          EXTRAOPTS="--config-file /root/.sabnzbd/sabnzbd.ini"
         mode: "0644"
 
     - name: Reload systemd
