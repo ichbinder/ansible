@@ -20,9 +20,9 @@
     state: present
   tags: sabnzbd
 
-- name: Ensure SABnzbd service is started and enabled
-  service:
+- name: Enable and start sabnzbdplus service
+  systemd:
     name: sabnzbdplus
-    state: started
     enabled: yes
+    state: started
   tags: sabnzbd
