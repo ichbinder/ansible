@@ -1,0 +1,28 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  tags: sabnzbd
+
+- name: Add SABnzbd PPA repository
+  apt_repository:
+    repo: ppa:jcfp/nobetas
+    state: present
+  tags: sabnzbd
+
+- name: Update apt cache after adding PPA
+  apt:
+    update_cache: yes
+  tags: sabnzbd
+
+- name: Install SABnzbd
+  apt:
+    name: sabnzbdplus
+    state: present
+  tags: sabnzbd
+
+- name: Ensure SABnzbd service is started and enabled
+  service:
+    name: sabnzbdplus
+    state: started
+    enabled: yes
+  tags: sabnzbd

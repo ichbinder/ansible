@@ -37,49 +37,12 @@
         delay: 10
         timeout: 300
 
-- name: Configure server - Install SABnzbd directly
+- name: Install SABnzbd
   hosts: created_servers
   become: true
-  gather_facts: !!bool true
+  gather_facts: true
   tasks:
-    - name: Update apt cache
-      apt:
-        update_cache: true
-
-    - name: Install software-properties-common
-      apt:
-        name: software-properties-common
-        state: present
-
-    - name: Add multiverse repository
-      command: add-apt-repository multiverse -y
-
-    - name: Add universe repository
-      command: add-apt-repository universe -y
-
-    - name: Add SABnzbd PPA (nobetas)
-      command: add-apt-repository ppa:jcfp/nobetas -y
-
-    - name: Update and upgrade packages
-      apt:
-        update_cache: true
-        upgrade: dist
-
-    - name: Install SABnzbd and required packages
-      apt:
-        name:
-          - sabnzbdplus
-          - python3-pip
-          - python3-boto3
-        state: present
-
-    - name: Create config directory
-      file:
-        path: /root/.sabnzbd
-        state: directory
-        mode: "0755"
-        owner: root
-        group: root
+    - include_tasks: add-sabnzbd.yaml
 
     - name: Create scripts directory
       file:
@@ -126,72 +89,6 @@
         mode: "0600"
         owner: root
         group: root
-
-    - name: Stop and disable default SABnzbd service
-      systemd:
-        name: sabnzbdplus
-        state: stopped
-        enabled: false
-      ignore_errors: true
-
-    - name: Remove default service configuration
-      file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /etc/default/sabnzbdplus
-        - /etc/systemd/system/sabnzbdplus.service.d
-      ignore_errors: true
-
-    - name: Create custom systemd service file
-      copy:
-        dest: /etc/systemd/system/sabnzbd.service
-        content: |
-          [Unit]
-          Description=SABnzbd Usenet Client
-          After=network.target
-
-          [Service]
-          Type=simple
-          User=root
-          Group=root
-          WorkingDirectory=/root
-          ExecStart=/usr/bin/sabnzbdplus -f /root/.sabnzbd/sabnzbd.ini -s 0.0.0.0:8080
-          Restart=on-failure
-          RestartSec=5
-
-          [Install]
-          WantedBy=multi-user.target
-        mode: "0644"
-
-    - name: Reload systemd daemon
-      systemd:
-        daemon_reload: yes
-
-    - name: Enable and start SABnzbd service
-      systemd:
-        name: sabnzbd
-        enabled: yes
-        state: started
-
-    - name: Wait for service to be fully started
-      wait_for:
-        port: 8080
-        timeout: 30
-
-    - name: Check SABnzbd service status
-      systemd:
-        name: sabnzbd
-      register: service_status
-
-    - name: Display service status
-      debug:
-        var: service_status
-
-    - name: Ensure service is running
-      fail:
-        msg: "SABnzbd service is not running"
-      when: service_status.status.ActiveState != "active"
 
 - name: Install aws cli
   hosts: created_servers
