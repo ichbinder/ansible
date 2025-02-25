@@ -9,14 +9,22 @@
     state: present
   tags: sabnzbd
 
-- name: Update apt cache after adding PPA
+- name: Add SABnzbd Addons PPA repository
+  apt_repository:
+    repo: ppa:jcfp/sab-addons
+    state: present
+  tags: sabnzbd
+
+- name: Update apt cache after adding PPAs
   apt:
     update_cache: yes
   tags: sabnzbd
 
-- name: Install SABnzbd
+- name: Install SABnzbd and Par2-Turbo
   apt:
-    name: sabnzbdplus
+    name:
+      - sabnzbdplus
+      - par2-turbo
     state: present
   tags: sabnzbd
 
