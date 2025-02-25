@@ -43,6 +43,9 @@
   gather_facts: true
   tasks:
     - include_tasks: add-sabnzbd.yaml
+      vars:
+        sabnzbd_user: "root"
+      tags: sabnzbd
 
     - name: Create scripts directory
       file:

@@ -20,9 +20,34 @@
     state: present
   tags: sabnzbd
 
+- name: Configure SABnzbd service user
+  lineinfile:
+    path: /etc/default/sabnzbdplus
+    regexp: "^USER="
+    line: "USER={{ sabnzbd_user }}"
+    state: present
+  become: true
+  tags: sabnzbd
+
+- name: Configure SABnzbd to start on boot
+  lineinfile:
+    path: /etc/default/sabnzbdplus
+    regexp: "^ENABLED="
+    line: "ENABLED=1"
+    state: present
+  become: true
+  tags: sabnzbd
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: true
+  become: true
+  tags: sabnzbd
+
 - name: Enable and start sabnzbdplus service
   systemd:
     name: sabnzbdplus
-    enabled: yes
+    enabled: true
     state: started
+  become: true
   tags: sabnzbd
