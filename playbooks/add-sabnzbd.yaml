@@ -20,22 +20,43 @@
     state: present
   tags: sabnzbd
 
-- name: Configure SABnzbd service user
-  lineinfile:
-    path: /etc/default/sabnzbdplus
-    regexp: "^USER="
-    line: "USER={{ sabnzbd_user }}"
-    state: present
+- name: Ensure .sabnzbd directory exists
+  file:
+    path: "/home/{{ sabnzbd_user }}/.sabnzbd"
+    state: directory
+    owner: "{{ sabnzbd_user }}"
+    group: "{{ sabnzbd_user }}"
+    mode: "0755"
   become: true
   tags: sabnzbd
 
-- name: Configure SABnzbd to start on boot
-  lineinfile:
-    path: /etc/default/sabnzbdplus
-    regexp: "^ENABLED="
-    line: "ENABLED=1"
-    state: present
+- name: Download SABnzbd systemd service template
+  get_url:
+    url: https://raw.githubusercontent.com/sabnzbd/sabnzbd/master/linux/sabnzbd%40.service
+    dest: "/etc/systemd/system/sabnzbd@.service"
+    mode: "0644"
   become: true
+  tags: sabnzbd
+
+- name: Check SABnzbd installation path
+  stat:
+    path: "/opt/sabnzbd/SABnzbd.py"
+  register: sabnzbd_script
+  tags: sabnzbd
+
+- name: Check PPA installation path
+  stat:
+    path: "/usr/bin/sabnzbdplus"
+  register: sabnzbd_ppa
+  tags: sabnzbd
+
+- name: Update service file for PPA installation
+  lineinfile:
+    path: "/etc/systemd/system/sabnzbd@.service"
+    regexp: "^ExecStart\\=/opt/sabnzbd/SABnzbd.py"
+    line: "ExecStart=/usr/bin/sabnzbdplus --disable-file-log --logging 1 --browser 0"
+  become: true
+  when: not sabnzbd_script.stat.exists and sabnzbd_ppa.stat.exists
   tags: sabnzbd
 
 - name: Reload systemd daemon
@@ -44,10 +65,19 @@
   become: true
   tags: sabnzbd
 
-- name: Enable and start sabnzbdplus service
+- name: Enable and start SABnzbd service using template
   systemd:
-    name: sabnzbdplus
+    name: "sabnzbd@{{ sabnzbd_user }}.service"
     enabled: true
     state: started
   become: true
+  tags: sabnzbd
+
+- name: Set sabnzbd service state
+  service_facts:
+  tags: sabnzbd
+
+- name: Display service status
+  debug:
+    msg: "SABnzbd service status: {{ ansible_facts.services['sabnzbd@' + sabnzbd_user + '.service'].state }}"
   tags: sabnzbd
