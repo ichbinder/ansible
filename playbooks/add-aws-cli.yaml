@@ -1,6 +1,6 @@
 - name: AWS CLI herunterladen (ARM64)
   get_url:
-    url: "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+    url: "https://awscli.amazonaws.com/awscli-exe-linux-aarch64-2.22.35.zip"
     dest: "/tmp/awscliv2.zip"
     mode: "0755"
 
