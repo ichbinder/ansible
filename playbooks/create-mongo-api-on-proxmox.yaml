@@ -1,39 +1,41 @@
 ---
-- name: Create Ubuntu LXC Container on Proxmox
-  hosts: proxmox
-  gather_facts: false
+- name: LXC-Container mit Ubuntu 24.10 auf Proxmox erstellen
+  hosts: localhost
+  gather_facts: true
   vars:
-    container_name: ubuntu-lxc
-    container_id: 100
-    memory: 1024
-    swap: 512
-    disk_size: 50
-    root_password: "{{ ROOT_PASSWORD }}"
-    proxmox_node: "{{ PROXMOX_NODE_NAME }}"
+    # Proxmox API Einstellungen
+    proxmox_api_host: "{{ PROXMOX_HOST }}"
+    proxmox_user: "{{ PROXMOX_USER }}"
+    proxmox_password: "{{ PROXMOX_PASSWORD }}"
+    node: "{{ PROXMOX_NODE_NAME }}"
+    vmid: 101 # Eine eindeutige ID für den Container
+
+    # Container-Einstellungen
+    hostname: "ubuntu-container"
+    ostemplate: "local:vztmpl/ubuntu-24.10-standard_24.10-1_amd64.tar.gz" # Pfad zum Template
+    storage: "local-lvm" # Speicherort auf dem Proxmox Server
+    password: "{{ ROOT_PASSWORD }}" # Root-Passwort im Container
+    cores: 2 # Anzahl der CPU-Kerne
+    memory: 2048 # Arbeitsspeicher in MB
+    swap: 512 # Swap in MB
+    netif: '{"net0": "name=eth0,bridge=vmbr0,ip=dhcp,tag=10,type=veth"}' # Netzwerkkonfiguration
 
   tasks:
-    - name: Create LXC Container
-      community.general.proxmox_lxc:
-        api_host: "{{ PROXMOX_HOST }}"
-        api_user: "{{ PROXMOX_USER }}"
-        api_password: "{{ PROXMOX_PASSWORD }}"
-        api_token_id: "{{ PROXMOX_TOKEN_ID }}"
-        api_token_secret: "{{ PROXMOX_TOKEN_SECRET }}"
-        node: "{{ proxmox_node }}"
-        vmid: "{{ container_id }}"
-        hostname: "{{ container_name }}"
+    - name: Erstelle LXC-Container
+      community.general.proxmox:
+        api_host: "{{ proxmox_api_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_password: "{{ proxmox_password }}"
+        node: "{{ node }}"
+        vmid: "{{ vmid }}"
+        hostname: "{{ hostname }}"
+        ostemplate: "{{ ostemplate }}"
+        password: "{{ password }}"
+        cores: "{{ cores }}"
         memory: "{{ memory }}"
         swap: "{{ swap }}"
-        cores: 1
-        ostemplate: "local:vztmpl/ubuntu-24.04-standard_24.04-1_amd64.tar.gz"
-        rootfs: "local-lvm:{{ disk_size }}"
-        password: "{{ root_password }}"
-        unprivileged: yes
-        features:
-          nesting: yes
-          keyctl: yes
-        net:
-          name: eth0
-          bridge: vmbr0
-          ip: dhcp
+        netif: "{{ netif }}"
+        storage: "{{ storage }}"
+        ostype: "ubuntu"
         state: present
+      delegate_to: localhost
