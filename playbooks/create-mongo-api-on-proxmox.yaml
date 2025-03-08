@@ -1,5 +1,5 @@
 ---
-- name: LXC-Container mit Ubuntu 24.10 auf Proxmox erstellen
+- name: LXC-Container mit Ubuntu 24.04 auf Proxmox erstellen
   hosts: localhost
   gather_facts: true
   vars:
@@ -12,7 +12,7 @@
 
     # Container-Einstellungen
     hostname: "ubuntu-container"
-    ostemplate: "local:vztmpl/ubuntu-24.10-standard_24.10-1_amd64.tar.gz" # Pfad zum Template
+    ostemplate: "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst" # Pfad zum Template
     storage: "local-lvm" # Speicherort auf dem Proxmox Server
     password: "{{ ROOT_PASSWORD }}" # Root-Passwort im Container
     cores: 2 # Anzahl der CPU-Kerne
