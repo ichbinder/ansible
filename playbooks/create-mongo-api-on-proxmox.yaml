@@ -4,7 +4,7 @@
   gather_facts: true
   vars:
     # Proxmox API Einstellungen
-    proxmox_api_host: "pm01.opentoken.de"
+    proxmox_api_host: "{{ PROXMOX_HOST }}"
     proxmox_user: "{{ PROXMOX_USER }}"
     proxmox_password: "{{ PROXMOX_PASSWORD }}"
     node: "{{ PROXMOX_NODE_NAME }}"
