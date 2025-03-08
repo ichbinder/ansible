@@ -1,0 +1,39 @@
+---
+- name: Create Ubuntu LXC Container on Proxmox
+  hosts: proxmox
+  gather_facts: false
+  vars:
+    container_name: ubuntu-lxc
+    container_id: 100
+    memory: 1024
+    swap: 512
+    disk_size: 50
+    root_password: "{{ ROOT_PASSWORD }}"
+    proxmox_node: "{{ PROXMOX_NODE_NAME }}"
+
+  tasks:
+    - name: Create LXC Container
+      community.general.proxmox_lxc:
+        api_host: "{{ PROXMOX_HOST }}"
+        api_user: "{{ PROXMOX_USER }}"
+        api_password: "{{ PROXMOX_PASSWORD }}"
+        api_token_id: "{{ PROXMOX_TOKEN_ID }}"
+        api_token_secret: "{{ PROXMOX_TOKEN_SECRET }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ container_id }}"
+        hostname: "{{ container_name }}"
+        memory: "{{ memory }}"
+        swap: "{{ swap }}"
+        cores: 1
+        ostemplate: "local:vztmpl/ubuntu-24.04-standard_24.04-1_amd64.tar.gz"
+        rootfs: "local-lvm:{{ disk_size }}"
+        password: "{{ root_password }}"
+        unprivileged: yes
+        features:
+          nesting: yes
+          keyctl: yes
+        net:
+          name: eth0
+          bridge: vmbr0
+          ip: dhcp
+        state: present
